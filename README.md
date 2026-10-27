@@ -7,6 +7,7 @@ A collection of personal working methods for coding agents, published under the 
 | Skill | Method |
 | --- | --- |
 | `agent-browser` | Choose direct reading or Neo; preserve login and task-tab boundaries |
+| `delivery` | Carry changes through direct delivery or independent PR review, fixes and authorized completion |
 | `daily-brief-feedback` | Record exact human feedback without inventing preference labels |
 | `doubao-search` | Query Feishu enterprise knowledge and qualify source verification |
 | `learn` | Propose evidence-backed lessons and separate saving from rule application |
@@ -25,6 +26,8 @@ A collection of personal working methods for coding agents, published under the 
 ## Install and use
 
 Each directory is a skill package with `SKILL.md` and optional supporting files. Install only the skills you want through your agent's documented skill installer or a compatible manager such as CC Switch. Installing a skill does not install its tools, log into accounts, enable schedules, send messages, upload recordings or authorize cleanup.
+
+For shared delivery defaults, install `delivery` and add one short instruction to each harness's native global rules: “Before Git/GitHub delivery or task cleanup, read and follow the installed delivery/SKILL.md.” Resolve the installed path on that device; keep personal paths in local configuration. A shared skill package supports distribution, while the native rule supplies the default entry point. Installation, selection and actual session loading are separate; existing sessions or special modes may not reload the rules automatically. Use the installed local version while offline and update it through the existing installer when desired. Keep any workspace delivery page as a link to this skill, not a second copy of its rules.
 
 Invocation behavior follows the host-specific manifest and `agents/openai.yaml` metadata; preserve both when copying a package. Some manifests retain the existing `disable-model-invocation` extension for hosts that support it.
 
