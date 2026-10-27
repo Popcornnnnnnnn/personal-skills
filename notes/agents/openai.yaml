@@ -1,0 +1,3 @@
+interface:
+  display_name: "Notes"
+  short_description: "Save complete articles in a verified Reading Queue"

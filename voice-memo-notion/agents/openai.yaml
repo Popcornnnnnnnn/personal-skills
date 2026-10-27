@@ -1,0 +1,4 @@
+interface:
+  display_name: "Voice Memos to Notion"
+  short_description: "Chinese meeting notes from Voice Memos, saved to Notion"
+  default_prompt: "Use $voice-memo-notion to turn my selected recording into Chinese meeting notes and save them to Notion."

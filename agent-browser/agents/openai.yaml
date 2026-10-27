@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agent Browser"
+  short_description: "Use Neo for browser tasks; keep direct reading routes"
+  default_prompt: "Use $agent-browser to open and inspect this page in BrowserOS neo, reusing its existing login when available."
+policy:
+  allow_implicit_invocation: true

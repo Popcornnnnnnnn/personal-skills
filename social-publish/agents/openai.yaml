@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Publish"
+  short_description: "Prepare Reddit, X, and Product Hunt packages"
+  default_prompt: "Use $social-publish to prepare community-specific Reddit, concise X, and structured Product Hunt launch packages in separate local folders."

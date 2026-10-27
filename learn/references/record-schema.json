@@ -1,0 +1,1172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:learn:contract:2",
+  "$ref": "#/$defs/CaseRecord",
+  "$defs": {
+    "Digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "EvidenceRef": {
+      "type": "object",
+      "required": [
+        "sha256",
+        "path",
+        "evidence_id"
+      ],
+      "properties": {
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^evidence/[0-9a-f]{64}\\.json$"
+        },
+        "evidence_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "EvidenceObject": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "evidence_id",
+        "kind",
+        "excerpt",
+        "source_locator",
+        "source_verification",
+        "capture_provenance"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "evidence_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "user",
+            "visible_user_message",
+            "human_comment",
+            "assistant_statement",
+            "tool_call",
+            "tool_output",
+            "artifact_excerpt"
+          ]
+        },
+        "excerpt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_locator": {
+          "type": "object",
+          "minProperties": 1
+        },
+        "source_verification": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capture_provenance": {
+          "type": "string",
+          "minLength": 1
+        },
+        "redacted": {
+          "type": "boolean"
+        },
+        "completeness": {
+          "type": "string"
+        },
+        "raw_value_display_allowed": {
+          "const": false
+        }
+      }
+    },
+    "Nomination": {
+      "type": "object",
+      "required": [
+        "origin",
+        "explicit_practice",
+        "source_ref",
+        "evidence_sha256"
+      ],
+      "properties": {
+        "origin": {
+          "const": "direct_human"
+        },
+        "explicit_practice": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "verified_author_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authority_basis": {
+          "type": "string"
+        }
+      }
+    },
+    "CaseRecord": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/LegacyCaseRecord"
+        },
+        {
+          "$ref": "#/$defs/CanonicalRecord"
+        }
+      ]
+    },
+    "CurrentPointer": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "case_id",
+        "revision_sha256",
+        "revision_path"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "case_id": {
+          "type": "string"
+        },
+        "revision_sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "revision_path": {
+          "type": "string",
+          "pattern": "^revisions/[0-9a-f]{64}\\.json$"
+        }
+      }
+    },
+    "WorkerProposal": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "proposal_id",
+        "worker_id",
+        "batch_id",
+        "task_key",
+        "base_revision",
+        "record",
+        "evidence_objects"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 2
+        },
+        "proposal_id": {
+          "type": "string"
+        },
+        "worker_id": {
+          "type": "string"
+        },
+        "batch_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "task_key": {
+          "type": "string"
+        },
+        "base_revision": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/Digest"
+            }
+          ]
+        },
+        "record": {
+          "$ref": "#/$defs/RecordDraft"
+        },
+        "evidence_objects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceObject"
+          }
+        }
+      }
+    },
+    "LegacyCaseRecord": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "case_id",
+        "mode",
+        "task",
+        "attempts",
+        "observation",
+        "evidence",
+        "human_nomination",
+        "analysis_state",
+        "notion",
+        "curation"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "case_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "previous_revision": {
+          "$ref": "#/$defs/Digest"
+        },
+        "mode": {
+          "enum": [
+            "record",
+            "review"
+          ]
+        },
+        "task": {
+          "type": "object",
+          "required": [
+            "id",
+            "goal"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "goal": {
+              "type": "string"
+            },
+            "session_date": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "task_id",
+              "actor"
+            ],
+            "properties": {
+              "actor": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "observation": {
+          "type": "object",
+          "required": [
+            "id",
+            "task_id",
+            "observed_behavior",
+            "expected_behavior",
+            "impact",
+            "reader_projection"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "task_id": {
+              "type": "string"
+            },
+            "analysis": {
+              "type": "object",
+              "required": [
+                "established_facts",
+                "hypotheses",
+                "open_questions",
+                "limits"
+              ],
+              "properties": {
+                "established_facts": {
+                  "type": "array"
+                },
+                "hypotheses": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "claim",
+                      "supporting_evidence",
+                      "contrary_evidence",
+                      "confidence"
+                    ]
+                  }
+                },
+                "open_questions": {
+                  "type": "array"
+                },
+                "limits": {
+                  "type": "array"
+                }
+              }
+            },
+            "reader_projection": {
+              "type": "object",
+              "required": [
+                "Name",
+                "Summary",
+                "Verdict"
+              ],
+              "properties": {
+                "Name": {
+                  "type": "string"
+                },
+                "Summary": {
+                  "type": "string"
+                },
+                "Verdict": {
+                  "enum": [
+                    "Confirmed issue",
+                    "Supported issue",
+                    "Good practice",
+                    "Blocked",
+                    "Not an error",
+                    "Completed",
+                    null
+                  ]
+                },
+                "date:Session Date:start": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          }
+        },
+        "human_nomination": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/Nomination"
+            }
+          ]
+        },
+        "analysis_state": {
+          "type": "object"
+        },
+        "notion": {
+          "type": "object"
+        },
+        "curation": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "observation": {
+                "properties": {
+                  "reader_projection": {
+                    "properties": {
+                      "Verdict": {
+                        "const": "Good practice"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "human_nomination": {
+                "$ref": "#/$defs/Nomination"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "review"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "observation": {
+                "required": [
+                  "analysis"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "RecordDraft": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "case_id",
+        "mode",
+        "task",
+        "attempts",
+        "observation",
+        "evidence",
+        "human_nomination",
+        "analysis_state",
+        "notion",
+        "curation",
+        "learning_kind",
+        "learning",
+        "capture_context"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 2
+        },
+        "case_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "previous_revision": {
+          "$ref": "#/$defs/Digest"
+        },
+        "mode": {
+          "enum": [
+            "record",
+            "review"
+          ]
+        },
+        "task": {
+          "type": "object",
+          "required": [
+            "id",
+            "goal"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "goal": {
+              "type": "string"
+            },
+            "session_date": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "task_id",
+              "actor"
+            ],
+            "properties": {
+              "actor": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "observation": {
+          "type": "object",
+          "required": [
+            "id",
+            "task_id",
+            "observed_behavior",
+            "expected_behavior",
+            "impact",
+            "reader_projection"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "task_id": {
+              "type": "string"
+            },
+            "analysis": {
+              "type": "object",
+              "required": [
+                "established_facts",
+                "hypotheses",
+                "open_questions",
+                "limits"
+              ],
+              "properties": {
+                "established_facts": {
+                  "type": "array"
+                },
+                "hypotheses": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "claim",
+                      "supporting_evidence",
+                      "contrary_evidence",
+                      "confidence"
+                    ]
+                  }
+                },
+                "open_questions": {
+                  "type": "array"
+                },
+                "limits": {
+                  "type": "array"
+                }
+              }
+            },
+            "reader_projection": {
+              "type": "object",
+              "required": [
+                "Name",
+                "Summary",
+                "Verdict"
+              ],
+              "properties": {
+                "Name": {
+                  "type": "string"
+                },
+                "Summary": {
+                  "type": "string"
+                },
+                "Verdict": {
+                  "enum": ["Confirmed issue", "Supported issue", "Not an error", "Good practice", "Knowledge", "Undetermined"]
+                },
+                "date:Session Date:start": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          }
+        },
+        "human_nomination": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/Nomination"
+            }
+          ]
+        },
+        "analysis_state": {
+          "type": "object"
+        },
+        "notion": {
+          "type": "object",
+          "required": [
+            "workspace_id",
+            "data_source_id",
+            "action",
+            "page_id"
+          ],
+          "properties": {
+            "workspace_id": {
+              "type": "string"
+            },
+            "data_source_id": {
+              "type": "string"
+            },
+            "action": {
+              "enum": [
+                "create",
+                "update"
+              ]
+            },
+            "page_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "curation": {
+          "type": "object"
+        },
+        "learning_kind": {
+          "enum": [
+            "case",
+            "knowledge_note",
+            "rule_candidate",
+            "skill_candidate"
+          ]
+        },
+        "learning": {
+          "type": "object",
+          "required": [
+            "lesson",
+            "novelty",
+            "asset_recommendations"
+          ],
+          "properties": {
+            "lesson": {
+              "type": "string"
+            },
+            "novelty": {
+              "enum": [
+                "new",
+                "update_existing",
+                "case_only",
+                "no_reusable_lesson"
+              ]
+            },
+            "asset_recommendations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/AssetRecommendation"
+              }
+            }
+          }
+        },
+        "capture_context": {
+          "type": "object",
+          "required": [
+            "flow",
+            "manual_request_ref",
+            "selection_method"
+          ],
+          "properties": {
+            "flow": {
+              "enum": [
+                "interactive",
+                "historical_backfill"
+              ]
+            },
+            "manual_request_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "historical_batch_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "task_key": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "selection_method": {
+              "enum": [
+                "interactive_selected_item",
+                "authorized_timeline_batch"
+              ]
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "observation": {
+                "properties": {
+                  "reader_projection": {
+                    "properties": {
+                      "Verdict": {
+                        "const": "Good practice"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "human_nomination": {
+                "$ref": "#/$defs/Nomination"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "review"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "observation": {
+                "required": [
+                  "analysis"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "AssetRecommendation": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "proposed_action",
+        "reason",
+        "scope",
+        "existing_asset_refs"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "rule",
+            "skill",
+            "pattern"
+          ]
+        },
+        "proposed_action": {
+          "enum": [
+            "recommend_only",
+            "create",
+            "update"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "existing_asset_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "before_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/Digest"
+            }
+          ]
+        },
+        "after_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/Digest"
+            }
+          ]
+        },
+        "unified_diff": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "staged_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "PublicationAuthorization": {
+      "type": "object",
+      "required": [
+        "flow",
+        "payload_sha256",
+        "review_state"
+      ],
+      "properties": {
+        "flow": {
+          "enum": [
+            "interactive",
+            "historical_backfill"
+          ]
+        },
+        "payload_sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "review_state": {
+          "enum": [
+            "approved",
+            "awaiting_post_review"
+          ]
+        },
+        "approval_sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "batch_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "batch_policy_sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "assignment_sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "task_index_sha256": {
+          "$ref": "#/$defs/Digest"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "flow": {
+                "const": "interactive"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "approval_sha256"
+            ],
+            "properties": {
+              "review_state": {
+                "const": "approved"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "flow": {
+                "const": "historical_backfill"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "batch_id",
+              "batch_policy_sha256",
+              "assignment_sha256",
+              "task_index_sha256"
+            ],
+            "properties": {
+              "review_state": {
+                "const": "awaiting_post_review"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "CanonicalRecord": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/RecordDraft"
+        },
+        {
+          "type": "object",
+          "required": [
+            "publication_authorization"
+          ],
+          "properties": {
+            "publication_authorization": {
+              "$ref": "#/$defs/PublicationAuthorization"
+            }
+          }
+        }
+      ]
+    },
+    "Approval": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "status",
+        "reviewed_payload_sha256",
+        "approved_actions",
+        "source"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "status": {
+          "const": "approved"
+        },
+        "reviewed_payload_sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "approved_actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "source": {
+          "type": "object",
+          "required": [
+            "origin",
+            "quote",
+            "source_ref"
+          ],
+          "properties": {
+            "origin": {
+              "const": "direct_human"
+            },
+            "quote": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "author_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "LearningProposal": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "proposal_id",
+        "flow",
+        "status",
+        "record",
+        "payload_sha256",
+        "human_summary"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 2
+        },
+        "proposal_id": {
+          "type": "string"
+        },
+        "flow": {
+          "enum": [
+            "interactive",
+            "historical_backfill"
+          ]
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "awaiting_review",
+            "approved",
+            "rejected",
+            "superseded",
+            "awaiting_post_review"
+          ]
+        },
+        "record": {
+          "$ref": "#/$defs/RecordDraft"
+        },
+        "payload_sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "human_summary": {
+          "type": "object",
+          "required": [
+            "reader_content",
+            "destination",
+            "actions",
+            "limits"
+          ],
+          "properties": {
+            "reader_content": {
+              "type": "string"
+            },
+            "destination": {
+              "type": "string"
+            },
+            "actions": {
+              "type": "array"
+            },
+            "limits": {
+              "type": "array"
+            }
+          }
+        }
+      }
+    },
+    "HistoricalAssignment": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "batch_id",
+        "source",
+        "scope"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "batch_id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "object",
+          "required": [
+            "origin",
+            "quote",
+            "source_ref"
+          ],
+          "properties": {
+            "origin": {
+              "const": "direct_human"
+            },
+            "quote": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "scope": {
+          "type": "object",
+          "required": [
+            "kind",
+            "day_partitions",
+            "task_keys"
+          ],
+          "properties": {
+            "kind": {
+              "const": "timeline_backfill"
+            },
+            "day_partitions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "task_keys": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "HistoricalTaskIndex": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "task_key",
+        "owner_day",
+        "original_session_date",
+        "qualifying_evidence"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "task_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner_day": {
+          "type": "string"
+        },
+        "original_session_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qualifying_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "sha256",
+              "event_time"
+            ],
+            "properties": {
+              "sha256": {
+                "$ref": "#/$defs/Digest"
+              },
+              "event_time": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

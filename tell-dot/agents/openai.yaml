@@ -1,0 +1,6 @@
+interface:
+  display_name: "Tell Dot"
+  short_description: "把当前聊天的主题和接续要点经 Slack 交给 Finn，并确认收件结果"
+  default_prompt: "$tell-dot 把刚才这个话题交给 Finn 暂存，以后再聊，先不要执行或设提醒。"
+policy:
+  allow_implicit_invocation: true

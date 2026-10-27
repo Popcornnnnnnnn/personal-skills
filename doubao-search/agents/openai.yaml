@@ -1,0 +1,5 @@
+interface:
+  display_name: "Doubao Search"
+  short_description: "Query enterprise knowledge and return source links"
+policy:
+  allow_implicit_invocation: false
