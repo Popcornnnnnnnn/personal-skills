@@ -508,8 +508,16 @@ class StateTests(unittest.TestCase):
         self.assertEqual(item["folder_ids"], ["11", "22"])
         self.assertEqual(item["observed_folder_ids"], ["11", "22", "33"])
         self.assertEqual(len(data["runs"][run["id"]]["inventories"]["bilibili"]), 2)
+        evidence = self.root / "reading-evidence.txt"
+        evidence.write_text("Fictional full-video reading evidence")
+        reading = self.root / "reading.json"
+        reading.write_text(json.dumps({"version": 1, "source_key": key, "carrier": "speech",
+            "audio_kind": "speech", "basis": "manual_inspection", "evidence_path": str(evidence),
+            "duration_seconds": 2, "visuals_verified": True,
+            "speech": {"method": "listening", "recognition_verified": True, "reviewed_ranges": [[0, 2]]}}))
         record = {"key": key, "status": "archived", "route": "knowledge", "archive_verified": True,
                   "coverage_complete": True, "index_verified": True,
+                  "reading_receipt": str(reading),
                   "index_url": "https://app.notion.com/p/index", "note_url": "https://app.notion.com/p/note"}
         self.call("record", record, "--run", run["id"])
         self.assertTrue(self.call("ready", None, "--key", key)["cleanup_ready"])

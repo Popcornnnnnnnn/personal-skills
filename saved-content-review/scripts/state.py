@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Atomic progress ledger for agent-observed saved-content runs; no remote writes."""
 import argparse
+from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -61,6 +63,176 @@ def in_scope(item, policy):
     return True
 
 
+def finite_number(value):
+    return type(value) in (int, float) and math.isfinite(value)
+
+
+def validate_reading(item, required=False):
+    """Check observed carrier evidence, not an ASR job's completion flag."""
+    path = item.get("reading_receipt")
+    if not path:
+        if required:
+            raise ValueError("Knowledge completion needs a source-carrier reading receipt")
+        return True  # Historical acceptance is not a new reading attempt.
+    receipt = json.loads(Path(path).read_text())
+    carrier = receipt.get("carrier")
+    if (receipt.get("version") != 1 or receipt.get("source_key") != item["key"]
+            or carrier not in {"text", "speech", "captions", "mixed"}
+            or not receipt.get("basis") or not Path(receipt.get("evidence_path", "")).is_file()):
+        raise ValueError("Reading receipt needs the exact source, known carrier and observed evidence")
+    if carrier == "text":
+        if receipt.get("text_complete") is not True:
+            raise ValueError("Source text is incomplete")
+        return True
+    if (carrier == "captions" and receipt.get("audio_kind") not in {"music_only", "none"}
+            or carrier in {"speech", "mixed"} and receipt.get("audio_kind") != "speech"):
+        raise ValueError("Confirm whether audio contains speech before choosing the reading route")
+    duration = receipt.get("duration_seconds")
+    if not finite_number(duration) or duration <= 0 or receipt.get("visuals_verified") is not True:
+        raise ValueError("Video needs its actual duration and verified relevant visuals")
+    if carrier in {"captions", "mixed"}:
+        captions = receipt.get("captions", {})
+        times = captions.get("sample_times", [])
+        if (len(times) < 2 or any(not finite_number(t) or not 0 <= t <= duration for t in times)
+                or times[0] > .25 or duration - times[-1] > .25
+                or any(not 0 < b - a <= .250001 for a, b in zip(times, times[1:]))
+                or captions.get("all_text_reviewed") is not True
+                or captions.get("changes_reviewed") is not True
+                or type(captions.get("unresolved_low_confidence")) is not int
+                or captions["unresolved_low_confidence"] != 0
+                or captions.get("unreadable_intervals") != []):
+            raise ValueError("Captions need dense full-timeline coverage and resolved text/visual checks")
+    if carrier in {"speech", "mixed"}:
+        speech = receipt.get("speech", {})
+        ranges = speech.get("reviewed_ranges", [])
+        if (speech.get("method") not in {"asr", "listening"}
+                or speech.get("recognition_verified") is not True or not ranges
+                or any(not isinstance(r, list) or len(r) != 2
+                       or any(not finite_number(t) for t in r) or not 0 <= r[0] < r[1] <= duration for r in ranges)):
+            raise ValueError("Speech needs verified full-audio reading evidence")
+        end = 0
+        for start, stop in sorted(ranges):
+            if start > end + .25:
+                raise ValueError("Speech coverage has an unread interval")
+            end = max(end, stop)
+        if duration - end > .25:
+            raise ValueError("Speech coverage ends before the source")
+        if speech["method"] == "asr":
+            texts = [re.sub(r"[\W_]+", "", s.get("text", "")).lower() for s in speech.get("segments", [])]
+            if (not any(texts) or speech.get("suspicious_segments")
+                    or (speech.get("expected_language") and speech.get("language") != speech["expected_language"])
+                    or any(len(t) > 4 and n >= 3 for t, n in Counter(texts).items())):
+                raise ValueError("Recognition quality is unresolved: repeated text, language or suspicious segments")
+    return True
+
+
+def validate_attempts(item, previous):
+    """One initial recognition plus one materially different alternative, free by default."""
+    attempts = item.get("reading_attempts", [])
+    old = previous.get("reading_attempts", [])
+    history = {}
+    if attempts:
+        path = item.get("reading_attempt_history_evidence")
+        history = json.loads(Path(path).read_text()) if path else {}
+        if history.get("source_key") != item["key"] or history.get("history_complete") is not True:
+            raise ValueError("Reconcile this source's historical recognition attempts before another job")
+    prior = history.get("prior_attempts", [])
+    sealed = previous.get("reading_prior_attempts")
+    if sealed is not None:
+        if item.get("reading_prior_attempts") != sealed or prior != sealed:
+            raise ValueError("Imported recognition history is sealed; a changed receipt cannot expand the budget")
+    elif old and (not isinstance(prior, list) or len(prior) > len(old) or old[:len(prior)] != prior):
+        raise ValueError("Cannot reclassify a new recognition attempt as existing history")
+    if (not isinstance(attempts, list) or not isinstance(prior, list)
+            or len(attempts) > max(2, len(prior)) or attempts[:len(old)] != old
+            or attempts[:len(prior)] != prior):
+        raise ValueError("Recognition attempt history is append-only and limited to two attempts")
+    if attempts:
+        item["reading_prior_attempts"] = json.loads(json.dumps(prior))
+    limit = item.get("reading_cost_limit", 0)
+    if (not finite_number(limit) or limit < 0
+            or (limit and (not item.get("reading_cost_authorization") or not item.get("reading_cost_currency")))):
+        raise ValueError("Paid recognition needs an explicit finite cost limit and human authorization")
+    total = 0
+    for attempt in attempts:
+        cost = attempt.get("estimated_cost", 0)
+        if (not attempt.get("engine") or not attempt.get("model") or not finite_number(cost) or cost < 0
+                or (cost and attempt.get("currency") != item.get("reading_cost_currency"))):
+            raise ValueError("Recognition attempts need an identified route and bounded cost/currency")
+        total += cost
+    if total > limit:
+        raise ValueError("Recognition cost budget exhausted; report instead of starting another job")
+    if len(attempts) == 2 and len(prior) < 2:
+        first, second = attempts
+        signature = lambda a: (a["model"], a.get("source_revision"))
+        if signature(first) == signature(second) or not second.get("difference_evidence"):
+            raise ValueError("Alternative recognition needs a different model or verified source revision and reason")
+
+
+def item_plan(item, request, policy=None):
+    """Plan the existing item's next step; never execute an external action."""
+    if not in_scope(item, policy or {}):
+        return {"action": "report", "reason": "outside_authorized_source_scope", "allow_external_retry": False}
+    if item.get("status") in {"complete", "discarded"}:
+        return {"action": "reconcile", "reason": "completed_source_dedup", "allow_external_retry": False}
+    unknown = [k for k in ("save_outcome", "cleanup_outcome") if item.get(k) in {"pending", "unknown"}]
+    if unknown or item.get("source_state") == "unknown":
+        return {"action": "reconcile", "reason": "unknown_external_outcome", "stages": unknown,
+                "allow_external_retry": False}
+    conditions = ["user_clarification", "source_changed", "tool_changed", "manual_request"]
+    if (request.get("resume_reason") not in conditions or not request.get("authorization")
+            or ((item.get("status") == "needs_decision" or item.get("human_parked"))
+                and request.get("resume_reason") != "user_clarification")):
+        return {"action": "report", "gap": item.get("reading_blocker", {}).get("gap", item.get("reason", "Reading incomplete")),
+                "resume_on": conditions, "allow_external_retry": False}
+    if request.get("next_attempt"):
+        path = item.get("reading_receipt")
+        receipt = json.loads(Path(path).read_text()) if path else {}
+        if (receipt.get("source_key") != item["key"] or receipt.get("carrier") not in {"speech", "mixed"}
+                or receipt.get("audio_kind") != "speech" or not receipt.get("basis")
+                or not Path(receipt.get("evidence_path", "")).is_file()):
+            return {"action": "report", "gap": "Recognition requires observed speech; classify the actual carrier first",
+                    "resume_on": conditions, "allow_external_retry": False}
+        candidate = {**item, "reading_attempts": item.get("reading_attempts", []) + [request["next_attempt"]]}
+        try:
+            validate_attempts(candidate, item)
+        except ValueError as error:
+            return {"action": "report", "gap": str(error), "resume_on": conditions, "allow_external_retry": False}
+    return {"action": "resume", "reason": request["resume_reason"], "reuse_source_key": item["key"],
+            "reuse_note_url": item.get("note_url"), "allow_external_retry": bool(request.get("next_attempt"))}
+
+
+def validate_mutation_outcomes(item, previous, incoming):
+    """A readback must reconcile this operation, never an inherited prior receipt."""
+    seen = previous.get("mutation_intent_ids", [])
+    if "mutation_intent_ids" in incoming and incoming["mutation_intent_ids"] != seen:
+        raise ValueError("Mutation intent history cannot be replaced")
+    seen = list(seen)
+    for stage in ("save", "cleanup"):
+        field, intent = stage + "_outcome", stage + "_intent_id"
+        old, new = previous.get(field), item.get(field)
+        if new is not None and new not in {"pending", "unknown", "verified", "not_applied"}:
+            raise ValueError("Unknown external-outcome state")
+        if old in {"pending", "unknown"}:
+            if item.get(intent) != previous.get(intent):
+                raise ValueError("Cannot replace an unresolved mutation intent")
+            if new != old and new != "unknown":
+                path = incoming.get("reconciliation_evidence")
+                receipt = json.loads(Path(path).read_text()) if path else {}
+                if (new not in {"verified", "not_applied"} or not previous.get(intent)
+                        or receipt.get("source_key") != item["key"] or receipt.get("stage") != stage
+                        or receipt.get("intent_id") != previous[intent] or receipt.get("outcome") != new
+                        or not Path(receipt.get("evidence_path", "")).is_file()):
+                    raise ValueError("Reconciliation needs a new source/stage/current-intent readback receipt")
+        elif new in {"pending", "unknown"} and new != old:
+            identity = item.get(intent)
+            if not isinstance(identity, str) or not identity.strip() or identity in seen:
+                raise ValueError("Record a unique mutation intent before the external request")
+            seen.append(identity)
+    if seen:
+        item["mutation_intent_ids"] = seen
+
+
 def ready(item, policy=None):
     if not in_scope(item, policy or {}):
         raise ValueError("Item or folder membership is outside the authorized cleanup scope")
@@ -68,6 +240,8 @@ def ready(item, policy=None):
     image_photos = receipt is not None and receipt.get("kind") in {"image", "live_photo"}
     if not all(item.get(k) is True for k in ("archive_verified", "coverage_complete")):
         raise ValueError("Archive and reading/media coverage must both be verified")
+    if any(item.get(k) in {"pending", "unknown"} for k in ("save_outcome", "cleanup_outcome")):
+        raise ValueError("Reconcile unknown external outcomes before cleanup")
     if not image_photos:
         if item.get("index_verified") is not True:
             raise ValueError("Index readback must be verified for this route")
@@ -80,6 +254,7 @@ def ready(item, policy=None):
                 or len(set(folders)) != len(folders)):
             raise ValueError("Bilibili cleanup needs exact observed owned-folder IDs")
     if item.get("route") == "knowledge":
+        validate_reading(item, required=item.get("reading_contract_required", False))
         if not str(item.get("note_url", "")).startswith("https://app.notion.com/"):
             raise ValueError("Missing canonical note URL")
     elif item.get("route") == "photos":
@@ -265,7 +440,7 @@ def due(data, policy):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("command", choices=["begin", "inventory", "record", "ready", "finish", "brief", "audit", "status", "due"])
+    parser.add_argument("command", choices=["begin", "inventory", "record", "ready", "plan", "finish", "brief", "audit", "status", "due"])
     parser.add_argument("--run")
     parser.add_argument("--trigger", choices=["manual", "scheduled", "catchup"], default="manual")
     parser.add_argument("--repair-of", help="Begin a bounded repair of a finished/interrupted collection run from today")
@@ -314,6 +489,8 @@ def main():
             result = data if not args.run else data["runs"][args.run]
         elif args.command == "due":
             result = due(data, json.loads((args.root / "trial.json").read_text()))
+        elif args.command == "plan":
+            result = item_plan(data["items"][args.key], incoming or {}, json.loads((args.root / "trial.json").read_text()))
         elif args.command == "ready":
             platform = args.key.split(":", 1)[0]
             if platform in data.get("cleanup_holds", {}):
@@ -403,6 +580,12 @@ def main():
                     raise ValueError("An item absent from live inventory needs an existing queue record")
                 previous = data["items"].get(key, {"key": key, "first_seen_at": instant, "discovered_from_queue": True})
                 item = {**previous, **incoming, "updated_at": instant}
+                validate_attempts(item, previous)
+                validate_mutation_outcomes(item, previous, incoming)
+                if item.get("route") == "knowledge" and item["status"] in {"archived", "complete"}:
+                    if previous.get("status") != "complete":
+                        item["reading_contract_required"] = True
+                    validate_reading(item, required=item.get("reading_contract_required", False))
                 if item["status"] == "complete":
                     ready(item, json.loads((args.root / "trial.json").read_text()))
                     if item.get("cleanup_verified") is not True or item.get("source_state") not in ["not_favorited", "not_in_collection", "not_in_scoped_folders"]:

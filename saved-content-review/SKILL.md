@@ -15,6 +15,12 @@ Enumerate by stable source IDs, preserve pagination/count gaps and deduplicate a
 
 Archive knowledge sources through `notes`. Preserve pure visual media through a configured media archive when that is the intended route. Use `voice-memo-notion` for explicitly selected recordings. Do not silently broaden accounts, folders or recording scope.
 
+Before recognition, classify the actual information carrier: source text, spoken
+audio, on-screen captions/graphics, or a mixture. An audio stream is not proof of
+narration. A music-only caption video needs full caption/visual reading, not a
+successful speech transcript. If the carrier is unknown, inspect or ask a targeted
+question; do not guess from ASR output. Follow [reading acceptance](references/reading.md).
+
 ## Archive and cleanup
 
 Verify source coverage, canonical saved content and required media/index readback before a source is eligible for normal cleanup. Preserve the user's disposition and all unrelated memberships. Removing one collection membership does not prove global removal.
@@ -22,6 +28,15 @@ Verify source coverage, canonical saved content and required media/index readbac
 Cleanup needs the current task's authorization or a verified, still-applicable owner grant. A historical example in this package is never a grant. Platform-confirmed invalid records use separate criteria and receipts; anonymous count gaps and access errors never justify guessing a deletion target.
 
 Use the local state ledger only after scope is configured. `scripts/state.py --help` describes the existing checkpoint interface. It records observed evidence and protects state atomically; it does not perform remote cleanup or establish human permission. Scope/state files live outside this repository. Consult [recovery](references/recovery.md) for retries and [audit](references/audit.md) for acceptance.
+
+For each selected unfinished source, call `state.py plan --key KEY --file REQUEST`
+before resuming. Reuse its source ID, media and canonical article. Record recognition
+attempts before starting them; keep at most one initial attempt and one materially
+different alternative, with zero cost allowed unless a specific bounded grant
+exists. Before a new knowledge `archived` or `complete` checkpoint, save a
+source-matched `reading_receipt` under the contract above. `record` enforces it and
+`ready` rechecks it before cleanup. These checks validate the recorded evidence;
+the agent must actually read the source and independently verify the saved result.
 
 ## Delivery
 
