@@ -437,6 +437,57 @@ def due(data, policy):
             "reason": "repair_budget_used" if needs_repair and repairs else "daily_collection_finished", "run_id": parent["id"]}
 
 
+def validate_execution_audit(audit, run):
+    """Validate optional stage evidence without replacing original run receipts."""
+    if audit.get("version") != 1 or audit.get("run_id") != run["id"] or audit.get("date") != run["date"]:
+        raise ValueError("Execution audit must match the original run and date")
+    counts = audit.get("counts", {})
+    for field in ("discovered", "fully_read", "saved_verified", "unfavorited", "remaining"):
+        if field not in counts or (counts[field] is not None and
+                (type(counts[field]) is not int or counts[field] < 0)):
+            raise ValueError("Audit counts must be nonnegative integers or null for unknown")
+    stages = audit.get("stages")
+    if not isinstance(stages, list) or not stages:
+        raise ValueError("Execution audit needs observed stages")
+    identities = set()
+    for stage in stages:
+        identity = (stage.get("id"), stage.get("platform"), stage.get("source_key"))
+        if (not isinstance(identity[0], str) or not identity[0].strip()
+                or identity[1] not in ("xhs", "douyin", "bilibili", None)
+                or (identity[2] is not None and not isinstance(identity[2], str))
+                or identity in identities):
+            raise ValueError("Audit stages need unique identities and a known platform")
+        identities.add(identity)
+        if stage.get("source_key") is not None:
+            platform, _, source_id = stage["source_key"].partition(":")
+            if platform != stage["platform"] or not re.fullmatch(ID_PATTERNS.get(platform, r"(?!)"), source_id):
+                raise ValueError("Audit source identity must match its platform")
+        if stage.get("status") not in {"success", "failed", "unknown", "not_attempted"}:
+            raise ValueError("Unknown execution stage status")
+        times = []
+        for field in ("started_at", "ended_at"):
+            if field not in stage:
+                raise ValueError("Stage times must be explicit, using null when unknown")
+            value = stage[field]
+            instant = datetime.fromisoformat(value) if isinstance(value, str) else None
+            if value is not None and (instant is None or instant.utcoffset() is None):
+                raise ValueError("Stage times need timezone offsets or null")
+            times.append(instant)
+        if all(t is not None for t in times) and times[1] < times[0]:
+            raise ValueError("Stage end precedes its start")
+        if type(stage.get("cause_proven")) is not bool or not isinstance(stage.get("next_step"), str):
+            raise ValueError("Stage cause and next step must be explicit")
+        if stage["status"] == "failed" and not str(stage.get("error") or "").strip():
+            raise ValueError("A failed stage needs its actual error")
+        evidence = stage.get("evidence", [])
+        if not isinstance(evidence, list) or (stage["status"] in {"success", "failed"} and not evidence):
+            raise ValueError("A resolved stage needs checkable evidence")
+        for entry in evidence:
+            path = Path(entry["path"])
+            if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != entry.get("sha256"):
+                raise ValueError("Stage evidence is missing or changed")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
@@ -498,6 +549,8 @@ def main():
             result = {"key": args.key, "cleanup_ready": ready(data["items"][args.key], json.loads((args.root / "trial.json").read_text()))}
         elif args.command == "audit":
             run = data["runs"][args.run]
+            if "execution_audit" in incoming:
+                validate_execution_audit(incoming["execution_audit"], run)
             if incoming["status"] not in {"pass", "attention", "blocked"}:
                 raise ValueError("Unknown audit status")
             report = Path(incoming["report_path"])

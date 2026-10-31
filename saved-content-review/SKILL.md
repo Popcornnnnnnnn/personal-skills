@@ -42,6 +42,8 @@ the agent must actually read the source and independently verify the saved resul
 
 Report saved sources, verified removals, invalid-record removals, retained failures and coverage separately. A finished run is not proof all items succeeded. Preserve exact source identities and recovery entry points without putting machine receipts into reader-facing notes. Existing private schedules and local power/status helpers stay in the owner configuration; do not create or revive background work as part of capture.
 
+Append stage evidence through the existing `state.py audit` interface at observed discovery, reading, save verification, cleanup, and final-list boundaries; use the [audit contract](references/audit.md). Record real start/end times as they occur, and leave uncaptured times or counts null. Report/daily-section delivery and message delivery are independent stages, not consequences of saving an article.
+
 ## Local owner context
 
 If `~/.config/personal-skills/profiles/saved-content-review/SKILL.md` exists, read it once for this task's private destinations, environment and established constraints. Keep that profile local. Verify changing facts live; a saved profile does not grant new access or authorize an unrelated action. Without a configured profile, resolve the required inputs from the current request and authorized tools; never invent the author's account or destination.

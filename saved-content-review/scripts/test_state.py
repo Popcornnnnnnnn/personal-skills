@@ -16,6 +16,45 @@ import state
 
 
 class StateTests(unittest.TestCase):
+    def test_execution_stage_audit_preserves_unknowns_and_evidence(self):
+        import hashlib
+        run = self.call("begin")["run"]
+        report = self.root / "audit.md"
+        report.write_text("Source readback fixture, not a live platform claim.")
+        stage = {"id": "save", "platform": "douyin", "source_key": "douyin:123",
+                 "status": "success", "started_at": None, "ended_at": None,
+                 "error": None, "cause_proven": False, "next_step": "",
+                 "evidence": [{"path": str(report), "sha256": hashlib.sha256(report.read_bytes()).hexdigest()}],
+                 "result": {"page_id": "fixture-page"}}
+        audit = {"version": 1, "run_id": run["id"], "date": run["date"],
+                 "counts": {"discovered": 1, "fully_read": 1, "saved_verified": 1,
+                            "unfavorited": 0, "remaining": None}, "stages": [stage]}
+        payload = {"status": "pass", "report_path": str(report), "execution_audit": audit}
+        first = self.call("audit", payload, "--run", run["id"])["audit"]
+        self.assertIsNone(first["execution_audit"]["stages"][0]["started_at"])
+        self.assertIsNone(first["execution_audit"]["counts"]["remaining"])
+        invalid = []
+        for change in ({"run_id": "another"}, {"date": "2026-10-17"},
+                       {"counts": {**audit["counts"], "remaining": False}},
+                       {"counts": {**audit["counts"], "remaining": -1}}):
+            invalid.append({**audit, **change})
+        for change in ({"status": "failed", "error": ""},
+                       {"started_at": "2026-10-18T04:01:00+08:00", "ended_at": "2026-10-18T04:00:00+08:00"},
+                       {"started_at": "2026-10-18T04:00:00"},
+                       {"evidence": []}, {"source_key": "bilibili:BV1w1pb6yEBn"}):
+            invalid.append({**audit, "stages": [{**stage, **change}]})
+        for value in invalid:
+            with self.subTest(value=value):
+                self.reject_unchanged("audit", {**payload, "execution_audit": value}, "--run", run["id"])
+        failure = {**stage, "status": "failed", "error": "fixture connection refused",
+                   "next_step": "Resume only after the existing connection is restored."}
+        self.call("audit", {**payload, "execution_audit": {**audit, "stages": [failure]}}, "--run", run["id"])
+        data = json.loads((self.root / "state.json").read_text())
+        self.assertEqual(data["runs"][run["id"]]["audits"][0], first)
+        self.assertEqual(len(data["runs"][run["id"]]["audits"]), 2)
+        report.write_text("Changed evidence must not silently validate.")
+        self.reject_unchanged("audit", payload, "--run", run["id"])
+
     def test_image_photos_complete_without_queue_but_keep_archive_gates(self):
         import hashlib
         run_id = self.call("begin")["run"]["id"]
