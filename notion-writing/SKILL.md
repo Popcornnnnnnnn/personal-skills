@@ -22,6 +22,16 @@ Fetch the actual parent, schema and existing record. Search by meaning plus stab
 - Use stable icons to identify page purpose, without decorating every heading. Keep directory pages brief and avoid empty structure.
 - For substantial editable prose, apply an installed humanizer when available while preserving factual qualifications and the writer's voice.
 
+## Required agent attribution
+
+Every new agent-written Notion page must have an `Agent` property containing `<harness>:<model>`, for example `codex:gpt-6-astra` or `opencode:deepseek-v4.1-flash`. Use a rich-text property so runtime model names do not require new select options. This is required authorship information, not a body footer, title suffix, comment or hidden execution receipt. Notion's built-in Created by value identifies the account or integration and is not a substitute.
+
+Before writing, verify the authoring harness and model from the current session and current turn's runtime metadata. For Codex, when available, use `CODEX_THREAD_ID` to locate its session record under `~/.codex/sessions/` and read only `session_meta.originator` and the latest current-turn `turn_context.model`. Other agents use their documented runtime metadata. Use the verified public-facing harness name and model identifier; do not copy these examples, infer identity from a default or earlier turn, or substitute the uploading integration for the author. If a component remains unverifiable after checking available metadata, write `Unknown` for that component and disclose the uncertainty. Never expose credentials, private host details or session contents.
+
+Confirm that the authorized destination supports the property before creating the page. In a database, reuse a compatible `Agent` property or add the rich-text property within the authorized schema scope; keep it visible in the page's properties even when general metadata-hiding defaults apply. Populate it as part of creation, and read back the exact value with the saved page. If the destination cannot store it, stop the dependent save and explain that a compatible authorized destination is needed. Do not create an unsigned page, substitute a footer, or move pages or create a new database without the necessary authorization.
+
+Preserve existing author attribution during later edits. If a different agent contributes substantive writing, retain the original value and add the verified contributor as a distinct `<harness>:<model>` entry in the same property, without duplicates. A formatting-only edit or upload does not claim authorship. This rule applies to future new pages; it does not authorize bulk backfilling historical pages or guessing their authors.
+
 ## Filing and views
 
 File by purpose in an existing suitable location. A project's established destination takes priority over a personal inbox. Reading, journals, recordings, tasks and business documents can have distinct destinations; do not merge them just to simplify navigation.
@@ -36,7 +46,7 @@ Preserve date meanings and user-selected sort/filter/view state. Do not invent a
 
 Use the smallest targeted update. Preserve comments, children, attachments, links, human edits and schema unless the task authorizes changes. Move existing IDs rather than recreate pages during an authorized reorganization. Keep unique material when resolving duplicates; a redirect can preserve links, and deletion remains a separate authorization.
 
-After writing, fetch the affected record and check its actual parent, identity, body, children/media and human fields. Verify the rendered UI when acceptance depends on layout or reminder behavior. Reconcile unknown outcomes before retrying and stop once acceptance passes. Installing this skill or configuring a writer does not prove an already-running agent has loaded it.
+After writing, fetch the affected record and check its actual parent, identity, body, children/media, required Agent attribution and human fields. Verify the rendered UI when acceptance depends on layout or reminder behavior. Reconcile unknown outcomes before retrying and stop once acceptance passes. Installing this skill or configuring a writer does not prove an already-running agent has loaded it.
 
 ## Maintain the method
 
