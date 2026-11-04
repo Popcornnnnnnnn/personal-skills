@@ -28,6 +28,8 @@ File by purpose in an existing suitable location. A project's established destin
 
 For reading libraries, the author's default is a native List with Side peek, a complete article behind each title and only useful human properties visible. Hide processing metadata and Summary where the selected database's rules call for it. Preserve fields and values when changing presentation. Operational trackers retain their established layouts.
 
+For database entries, store the entry's date in the appropriate date property, not in the title. Use a subject-only title and show the date property alongside it when the date helps readers browse. Use the property for date sorting, calendar views and duplicate checks. Preserve the date's meaning; a review date, publication date and capture date are not interchangeable. Native child-page directories retain their separately established naming conventions.
+
 Preserve date meanings and user-selected sort/filter/view state. Do not invent a deadline, reminder, completion or owner. Task progress, evidence, severity, reading disposition and human judgment are separate concepts. A positive practice label requires a specific human nomination where the learning workflow uses that distinction.
 
 ## Safe updates and acceptance
