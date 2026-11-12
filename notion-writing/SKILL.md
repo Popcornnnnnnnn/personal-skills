@@ -19,6 +19,7 @@ Fetch the actual parent, schema and existing record. Search by meaning plus stab
 - Prefer concise English navigation, titles and generated document prose, except where the user or an established channel has another explicit language rule. Preserve human text and source originals.
 - Use prose, lists, tables and diagrams when they help the reader. Keep nonessential timestamps, local paths, internal IDs, execution receipts and model-processing details in separate operational records. Include original material when requested.
 - One source usually becomes one complete article. Keep its original source accessible. Saving is not proof the human has read, liked or accepted it.
+- For video reading notes, obtain and read the full substantive transcript or audio before writing the article; check relevant visuals when needed. A secondary summary or partial transcript is not enough. If full coverage is unavailable, report the blocker and retain the source; do not create or present a partial note as the finished article. Preserve any existing record and human content.
 - Use stable icons to identify page purpose, without decorating every heading. Keep directory pages brief and avoid empty structure.
 - For substantial editable prose, apply an installed humanizer when available while preserving factual qualifications and the writer's voice.
 

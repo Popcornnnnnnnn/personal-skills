@@ -16,6 +16,193 @@ import state
 
 
 class StateTests(unittest.TestCase):
+    def gap_fixture(self):
+        import hashlib
+        def save(name, value):
+            path = self.root / name
+            path.write_text(json.dumps(value))
+            return {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        key = "douyin:123"
+        url = "https://www.douyin.com/video/123"
+        page_id = "11111111111111111111111111111111"
+        note = "https://app.notion.com/p/" + page_id
+        evidence = save("source-observation.json", {"source_key": key, "fictional": True})
+        auth = {"kind": "explicit_user_available_content_cleanup", "source_key": key,
+                "criterion": state.GAP_ACCEPTANCE, "request_text": "Process accessible content; disclose gaps, then remove this favorite."}
+        review = {"source_key": key, "all_accessible_processed": True, "unprocessed_accessible": [],
+                  "processed_material": ["All available source text and visuals"], "evidence": [evidence]}
+        readback = {"source_key": key, "source_url": url, "note_url": note, "page_id": page_id,
+                    "save_intent_id": "fixture-save", "source_verified": True, "content_verified": True,
+                    "observed_at": self.clock.isoformat(), "body": "Source explanation. Missing wording is unknown.",
+                    "evidence": [evidence]}
+        receipt = {"version": 1, "criterion": state.GAP_ACCEPTANCE, "source_key": key,
+                   "source_url": url, "note_url": note, "authorization": save("authorization.json", auth),
+                   "accessible_review": save("accessible-review.json", review),
+                   "note_readback": save("note-readback.json", readback),
+                   "residual_gaps": [{"id": "audio-gap", "description": "Unavailable source wording",
+                                      "reason": "Fictional source interruption", "note_text": "Missing wording is unknown.",
+                                      "evidence": [evidence]}]}
+        path = self.root / "gap-receipt.json"
+        path.write_text(json.dumps(receipt))
+        item = {"key": key, "url": url, "route": "knowledge", "archive_verified": True,
+                "coverage_complete": False, "index_verified": True, "index_url": note, "note_url": note,
+                "save_outcome": "verified", "save_intent_id": "fixture-save",
+                "cleanup_acceptance": state.GAP_ACCEPTANCE, "gap_acceptance_receipt": str(path)}
+        return item, receipt, save
+
+    def test_gap_acceptance_preserves_incomplete_reading_and_full_reading_default(self):
+        item, _, _ = self.gap_fixture()
+        self.assertTrue(state.ready(item, self.policy))
+        self.assertIs(item["coverage_complete"], False)
+        with self.assertRaises(ValueError):
+            state.ready({**item, "cleanup_acceptance": None}, self.policy)
+
+    def test_gap_acceptance_keeps_save_identity_scope_and_outcome_guards(self):
+        item, _, _ = self.gap_fixture()
+        cases = [{"archive_verified": False}, {"index_verified": False}, {"scope_excluded": True},
+                 {"coverage_complete": True}, {"route": "photos"}, {"url": "https://www.douyin.com/video/456"},
+                 {"note_url": "https://app.notion.com/p/" + "2" * 32},
+                 {"index_url": "https://app.notion.com/p/" + "2" * 32},
+                 {"source_state": "unknown"}]
+        cases += [{"save_outcome": v} for v in [None, "pending", "unknown", "not_applied"]]
+        cases += [{"cleanup_outcome": v} for v in ["pending", "unknown"]]
+        for change in cases:
+            with self.subTest(change=change), self.assertRaises((ValueError, KeyError)):
+                state.ready({**item, **change}, self.policy)
+
+    def test_gap_acceptance_rejects_missing_or_ambiguous_authorization(self):
+        for change in [{"source_key": "douyin:456"}, {"criterion": "anything"},
+                       {"kind": "automatic"}, {"request_text": ""}, {"request_text": None}]:
+            item, receipt, save = self.gap_fixture()
+            auth = json.loads(Path(receipt["authorization"]["path"]).read_text())
+            receipt["authorization"] = save("authorization.json", {**auth, **change})
+            Path(item["gap_acceptance_receipt"]).write_text(json.dumps(receipt))
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                state.ready(item, self.policy)
+
+    def test_gap_acceptance_blocks_unprocessed_accessible_content(self):
+        for change in [{"all_accessible_processed": False}, {"unprocessed_accessible": ["last chapter"]},
+                       {"processed_material": []}, {"processed_material": "not a list"},
+                       {"evidence": []}, {"source_key": "douyin:456"}]:
+            item, receipt, save = self.gap_fixture()
+            review = json.loads(Path(receipt["accessible_review"]["path"]).read_text())
+            receipt["accessible_review"] = save("accessible-review.json", {**review, **change})
+            Path(item["gap_acceptance_receipt"]).write_text(json.dumps(receipt))
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                state.ready(item, self.policy)
+
+    def test_gap_acceptance_requires_current_source_matched_note_readback(self):
+        cases = [{"source_key": "douyin:456"}, {"source_url": "https://www.douyin.com/video/456"},
+                 {"page_id": "22222222222222222222222222222222"}, {"save_intent_id": "old-save"},
+                 {"source_verified": False}, {"content_verified": False}, {"body": "Gap not disclosed"},
+                 {"observed_at": "2026-10-18T04:00:00"}, {"evidence": []}]
+        for change in cases:
+            item, receipt, save = self.gap_fixture()
+            readback = json.loads(Path(receipt["note_readback"]["path"]).read_text())
+            receipt["note_readback"] = save("note-readback.json", {**readback, **change})
+            Path(item["gap_acceptance_receipt"]).write_text(json.dumps(receipt))
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                state.ready(item, self.policy)
+
+    def test_gap_acceptance_requires_every_disclosed_gap_and_unchanged_evidence(self):
+        for change in [{"residual_gaps": []}, {"source_key": "douyin:456"}, {"criterion": "anything"}]:
+            item, receipt, _ = self.gap_fixture()
+            Path(item["gap_acceptance_receipt"]).write_text(json.dumps({**receipt, **change}))
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                state.ready(item, self.policy)
+        for change in [{"note_text": "undisclosed"}, {"description": None}, {"reason": ""}, {"evidence": []}]:
+            item, receipt, _ = self.gap_fixture()
+            receipt["residual_gaps"][0].update(change)
+            Path(item["gap_acceptance_receipt"]).write_text(json.dumps(receipt))
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                state.ready(item, self.policy)
+        item, receipt, _ = self.gap_fixture()
+        Path(receipt["accessible_review"]["path"]).write_text("tampered")
+        with self.assertRaises(ValueError):
+            state.ready(item, self.policy)
+
+    def test_gap_acceptance_record_complete_keeps_truthful_coverage_and_cleanup_fencing(self):
+        item, _, _ = self.gap_fixture()
+        run = self.call("begin")["run"]
+        self.call("inventory", {"platform": "douyin", "account": state.ACCOUNTS["douyin"],
+                  "items": [{"id": "123", "title": "Fictional source"}], "accessible_count": 1}, "--run", run["id"])
+        self.call("record", {**item, "status": "archived"}, "--run", run["id"])
+        self.assertTrue(self.call("ready", None, "--key", item["key"])["cleanup_ready"])
+        pending = {"key": item["key"], "status": "pending_read", "cleanup_outcome": "pending", "cleanup_intent_id": "cleanup-one"}
+        self.call("record", pending, "--run", run["id"])
+        self.reject_unchanged("ready", None, "--key", item["key"])
+        self.reject_unchanged("record", {"key": item["key"], "status": "complete", "cleanup_outcome": "verified",
+                              "cleanup_verified": True, "source_state": "not_favorited"}, "--run", run["id"])
+        proof = self.root / "cleanup-reconciliation.json"
+        proof.write_text(json.dumps({"source_key": item["key"], "stage": "cleanup", "intent_id": "cleanup-one",
+                         "outcome": "verified", "evidence_path": str(self.root / "source-observation.json")}))
+        result = self.call("record", {"key": item["key"], "status": "complete", "cleanup_outcome": "verified",
+                           "cleanup_verified": True, "source_state": "not_favorited", "reconciliation_evidence": str(proof)}, "--run", run["id"])
+        self.assertIs(result["coverage_complete"], False)
+        self.assertEqual(result["cleanup_acceptance"], state.GAP_ACCEPTANCE)
+        self.assertEqual(self.call("plan", {}, "--key", item["key"])["reason"], "completed_source_dedup")
+
+    def test_scheduled_empty_success_requires_source_evidence_and_audit(self):
+        import hashlib
+        with patch.object(state, 'due', return_value={'action': 'collect', 'trigger': 'scheduled'}):
+            run = self.call('begin', None, '--trigger', 'scheduled')['run']
+        run_id = run['id']
+        finish = {'outcome': 'completed_readable_favorites', 'counts': {'discovered': 0},
+                  'coverage': {'douyin': 'verified_empty'}}
+        self.reject_unchanged('finish', finish, '--run', run_id)
+        folder = self.root / 'runs' / run_id
+        folder.mkdir(parents=True)
+        stages = []
+        for platform, account in state.ACCOUNTS.items():
+            receipt = {'run_id': run_id, 'date': run['date'], 'platform': platform, 'account': account,
+                       'account_verified': True, 'positive_empty': True, 'accessible_count': 0,
+                       'displayed_total': 0, 'unknown_count': 0, 'pagination_complete': True}
+            evidence = []
+            for phase, key in [('before', 'source_access'), ('after', 'independent_readback')]:
+                self.call('inventory', {'platform': platform, 'account': account, 'phase': phase,
+                          'items': [], 'accessible_count': 0, 'displayed_total': 0,
+                          'unknown_count': 0, 'pagination_complete': True}, '--run', run_id)
+                p = folder / f'{platform}-{phase}.json'
+                p.write_text(f'synthetic {platform} {phase}')
+                digest = hashlib.sha256(p.read_bytes()).hexdigest()
+                receipt[key] = {'path': p.name, 'observed_at': self.clock.isoformat(), 'sha256': digest}
+                evidence.append({'path': str(p), 'sha256': digest})
+            (folder / f'empty-{platform}.json').write_text(json.dumps(receipt))
+            stages.append({'id': 'verified_empty', 'platform': platform, 'source_key': None,
+                           'status': 'success', 'started_at': receipt['source_access']['observed_at'],
+                           'ended_at': receipt['independent_readback']['observed_at'],
+                           'cause_proven': False, 'next_step': '', 'evidence': evidence})
+        # Inventories and receipt files alone do not replace the execution audit.
+        self.reject_unchanged('finish', finish, '--run', run_id)
+        report = folder / 'report.md'
+        report.write_text('Synthetic fixture')
+        audit = {'version': 1, 'run_id': run_id, 'date': run['date'], 'stages': stages,
+                 'counts': dict.fromkeys(('discovered', 'fully_read', 'saved_verified', 'unfavorited', 'remaining'), 0)}
+        self.call('audit', {'status': 'pass', 'report_path': str(report), 'execution_audit': audit}, '--run', run_id)
+        evidence = folder / 'xhs-after.json'
+        original = evidence.read_text()
+        evidence.write_text('tampered')
+        self.reject_unchanged('finish', finish, '--run', run_id)
+        evidence.write_text(original)
+        receipt_path = folder / 'empty-xhs.json'
+        receipt = json.loads(receipt_path.read_text())
+        receipt['unknown_count'] = None
+        receipt_path.write_text(json.dumps(receipt))
+        self.reject_unchanged('finish', finish, '--run', run_id)
+        receipt['unknown_count'] = 0
+        receipt_path.write_text(json.dumps(receipt))
+        self.assertEqual(self.call('finish', finish, '--run', run_id)['status'], 'finished')
+
+    def test_unknown_sources_can_finish_as_attention(self):
+        with patch.object(state, 'due', return_value={'action': 'collect', 'trigger': 'scheduled'}):
+            run = self.call('begin', None, '--trigger', 'scheduled')['run']
+        self.reject_unchanged('finish', {'outcome': 'completed_readable_favorites',
+                              'counts': {'discovered': None}}, '--run', run['id'])
+        result = self.call('finish', {'outcome': 'attention_unverified_sources',
+                            'counts': {'discovered': None, 'unknown_or_invisible_count': None}}, '--run', run['id'])
+        self.assertEqual(result['status'], 'finished')
+        self.assertIsNone(result['counts']['unknown_or_invisible_count'])
+
     def test_execution_stage_audit_preserves_unknowns_and_evidence(self):
         import hashlib
         run = self.call("begin")["run"]

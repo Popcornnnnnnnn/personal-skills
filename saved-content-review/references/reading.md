@@ -88,6 +88,46 @@ rules, preserve human edits and read back the same canonical page before cleanup
 
 ## Bounded recognition and explicit resumption
 
+### Explicit acceptance of disclosed gaps
+
+The full-reading contract above remains the default. When the user explicitly
+authorizes cleanup after all accessible material is processed and residual gaps
+are disclosed in the saved note, use the existing ledger's supported gap-aware
+contract. This grants no new source access, recognition budget or cleanup scope.
+Do not use it to skip material that can still be processed through authorized
+routes, invent missing words, or classify an ASR omission as missing source audio.
+
+Record `cleanup_acceptance:"available_content_with_disclosed_gaps"` and
+`gap_acceptance_receipt` on the same knowledge item. Preserve
+`coverage_complete:false`, source identity, canonical note and reading history.
+The receipt is JSON with `version:1`, the same `criterion`, exact `source_key`,
+canonical `source_url`, canonical `note_url`, and these required fields:
+
+- `authorization`: a hashed JSON reference with `kind` equal to
+  `explicit_user_available_content_cleanup`, the exact `source_key`, the same
+  `criterion`, and the actual nonempty user `request_text`. A receipt or this
+  document is not independent authorization.
+- `accessible_review`: a hashed JSON reference with the exact `source_key`,
+  `all_accessible_processed:true`, `unprocessed_accessible:[]`, a nonempty list of
+  `processed_material`, and nonempty hashed `evidence` references to actual source
+  coverage observations. Reuse verified prior reading without pretending to repeat it.
+- `note_readback`: a hashed JSON reference with the exact `source_key`,
+  `source_url`, `note_url`, `page_id`, current verified `save_intent_id`,
+  `source_verified:true`, `content_verified:true`, actual timezone-aware
+  `observed_at`, full saved `body`, and hashed `evidence` of independent readback.
+- `residual_gaps`: a nonempty list. Each gap has a distinct `id`, nonempty
+  `description` and `reason`, exact `note_text` appearing in the saved body, and
+  nonempty hashed `evidence`. Describe uncertainty honestly, including tool limits.
+
+Every hashed reference is `{path,sha256}` and must point to unchanged evidence.
+`record` and `ready` validate this contract, current verified save, source/note
+identity and existing scope/index/outcome checks. Preserve pre-click intents and
+independent membership readback. `complete` means the authorized processing and
+cleanup goal was met; `coverage_complete:false` and the receipt continue to show
+the reading gaps. Keep fully-read counts separate from accepted cleanup counts.
+This is not the separate human-discard route and does not authorize forced-zero
+cleanup or deletion of unknown records.
+
 Run `state.py plan --key KEY --file REQUEST` on the existing item. REQUEST supplies
 an actual current human `authorization` reference and a `resume_reason` of
 `manual_request`, `user_clarification`, `source_changed` or `tool_changed`.

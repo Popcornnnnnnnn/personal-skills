@@ -34,11 +34,42 @@ before resuming. Reuse its source ID, media and canonical article. Record recogn
 attempts before starting them; keep at most one initial attempt and one materially
 different alternative, with zero cost allowed unless a specific bounded grant
 exists. Before a new knowledge `archived` or `complete` checkpoint, save a
-source-matched `reading_receipt` under the contract above. `record` enforces it and
-`ready` rechecks it before cleanup. These checks validate the recorded evidence;
-the agent must actually read the source and independently verify the saved result.
+source-matched `reading_receipt` for full reading, or use the explicitly authorized
+gap-aware contract in [reading acceptance](references/reading.md). `record` enforces
+the selected contract and `ready` rechecks it before cleanup. Gap-aware acceptance
+requires all accessible material processed, residual gaps disclosed in the
+independently verified canonical note, exact-source user authorization and hashed
+evidence. Keep `coverage_complete:false` and do not count the item as fully read.
+It changes cleanup acceptance, not what was actually read. Missing saves,
+unprocessed accessible content and unknown operations remain blocked. These checks
+validate recorded evidence; the agent must actually read the available source and
+independently verify the saved result.
 
 ## Delivery
+
+For each platform, distinguish a verified empty list from an unstarted or incomplete
+run. Only when the authenticated, scoped list and a later independent readback both
+actually show zero items, zero displayed count, zero unknowns and complete
+pagination, record matching `before` and `after` inventories through `state.py`.
+Preserve each observation as a separate immutable evidence file under the run
+directory. Before finishing, create `empty-PLATFORM.json` there exclusively (do not
+overwrite a prior receipt), then independently read it back. Its fields are `run_id`,
+`date`, `platform`, `account`, `account_verified:true`, `positive_empty:true`,
+`accessible_count:0`, `displayed_total:0`, `unknown_count:0`,
+`pagination_complete:true`, and `source_access` and `independent_readback`, each
+with a run-relative `path`, actual timezone-aware `observed_at`, and `sha256` of
+the distinct preserved observation. Include both evidence files using absolute paths
+in a successful `verified_empty` stage for that platform in the existing execution
+audit and execute its validator; preserve a null unknown count rather
+than guessing zero. The local watcher verifies receipt identity, both ledger
+inventories, observation times and evidence hashes after the run finishes. It
+cannot independently establish the truth of a source observation. A count gap,
+missing receipt, failed access, or empty Reading Inbox is not a verified empty list.
+`state.py finish` rejects a platform `verified_empty` claim without that evidence.
+For the scheduled collection, an empty outcome or a completed outcome with zero
+discoveries requires verified-empty evidence for all three scoped platforms. If
+any source is unknown or unavailable, finish with an attention/unverified outcome
+and preserve unknown counts; do not call the whole collection empty.
 
 Report saved sources, verified removals, invalid-record removals, retained failures and coverage separately. A finished run is not proof all items succeeded. Preserve exact source identities and recovery entry points without putting machine receipts into reader-facing notes. Existing private schedules and local power/status helpers stay in the owner configuration; do not create or revive background work as part of capture.
 

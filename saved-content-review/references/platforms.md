@@ -10,6 +10,8 @@ Cards can be virtualized. Deduplicate stable note IDs across viewport/pagination
 
 Verify the selected favorites/video view and wait for actual records or a positive empty-state message. Collections, music, likes and other tabs are separate scopes. Preserve stable content IDs and access limitations; loading or blocked pages do not prove emptiness.
 
+If a public media lookup exposes no media while the exact post plays in the authorized Neo session, do not label the account expired. When the installed downloader documents a content-only page-data input, pass only that post's stable ID and rendered media fields through that supported input. Verify the page URL, loaded player and source identity first; retain the original lookup error and acquisition/readback receipts. Do not export authentication, unrelated page state or invent a private API fallback. If the supported bridge is unavailable, retain the item with the exact access gap.
+
 ## Bilibili
 
 Verify the current account and exact owned folder memberships. Process only the selected folders. Removing one membership is not global unfavoriting; preserve unrelated memberships. An authenticated CLI and rendered page can be independent evidence when both are available.
@@ -21,3 +23,5 @@ Normal cleanup requires authorization plus verified archival, adequate source/me
 Platform-confirmed invalid favorites can use a separately authorized invalid-record route. A record needs identifiable current evidence of invalidity; anonymous count gaps, access errors, missing subtitles and login failures do not qualify. Keep invalid removals separate from successfully archived sources. Do not guess IDs to satisfy a displayed count.
 
 Preserve pre-action evidence and verify the source state after action. If the result is uncertain, reconcile before retrying. Never treat a workflow description, historical receipt or this package's installation as cleanup authorization.
+
+For toggle-based cleanup, finish one source's acceptance before toggling the next: record its exact intent, click once, wait for the rendered state to settle, then independently reload the loaded source and scoped collection. A successful click call and an immediate unchanged icon prove neither removal nor rejection. Require the exact membership to be absent before recording success. If the outcome remains unknown, retain the pending intent and reconcile it; only a fresh read proving the first action was not applied permits a new bounded intent. A page whose account or content is still loading cannot provide that proof.

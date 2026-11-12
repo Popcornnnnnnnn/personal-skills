@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 import subprocess
 from zoneinfo import ZoneInfo
-from state import nonblocking_unavailable
+from state import nonblocking_unavailable, verified_empty
 
 TZ = ZoneInfo('Asia/Shanghai')
 ROOT = Path.home() / 'Library/Application Support/saved-content-review'
@@ -43,8 +43,23 @@ def health(data, instant, root):
               'remote_verification': False, 'channels': {}, 'issues': [], 'notices': [],
               'run_ids': [r['id'] for r in runs]}
     if not runs:
-        result['state'] = 'not_started' if instant.hour < 4 else 'missing_run'
+        result['state'] = 'no_run_receipt' if instant.hour < 4 else 'missing_run'
         result['issues'].append('No collection run receipt; this does not mean empty sources.')
+        handoff_path = root / 'handoffs' / day / 'processing.json'
+        if handoff_path.exists():
+            try:
+                handoff = json.loads(handoff_path.read_text())
+                observed = datetime.fromisoformat(handoff['observed_at'])
+                if (handoff.get('date') != day or observed.utcoffset() is None
+                        or observed.astimezone(TZ).date().isoformat() != day
+                        or handoff.get('outcome') != 'unknown'
+                        or not handoff.get('request_id') or not handoff.get('collector_thread_id')):
+                    raise ValueError('invalid handoff receipt')
+                result['state'] = 'handoff_unknown'
+                result['handoff'] = handoff
+                result['issues'].append('Processing handoff outcome unknown; admission and execution are unconfirmed.')
+            except (OSError, ValueError, KeyError, TypeError):
+                result['issues'].append('Unreadable or invalid processing handoff receipt')
     else:
         latest = runs[-1]
         observations = dict(latest.get('platforms', {}))
@@ -74,7 +89,9 @@ def health(data, instant, root):
                               'receipt_path': latest.get('brief_delivery_path'),
                               'draft_path': latest.get('brief_report_path')}
         elapsed = instant - datetime.fromisoformat(latest['started_at'])
-        result['state'] = ('interrupted' if elapsed >= timedelta(minutes=90) else 'running') if latest['status'] == 'running' else latest['status']
+        result['state'] = ('completion_unconfirmed' if elapsed >= timedelta(minutes=90) else 'running') if latest['status'] == 'running' else latest['status']
+        if result['state'] == 'completion_unconfirmed':
+            result['issues'].append('Run lease expired without completion; whether execution stopped is unknown.')
         result['failure_history'] = [
             {'run_id': run['id'], 'blocker': blocker}
             for run in runs for blocker in run.get('blockers', [])]
@@ -99,6 +116,8 @@ def health(data, instant, root):
             result['channels'][name]['result'] = ('unavailable' if nonblocking_unavailable(snapshot) else
                 'success' if (evidence or {}).get('coverage_complete') is True else
                 'failed' if evidence is not None else 'unverified')
+            result['channels'][name]['empty_list'] = ('verified_empty' if latest['status'] == 'finished'
+                and verified_empty(latest, name, root) else 'unverified')
             if nonblocking_unavailable(snapshot):
                 result['channels'][name]['visibility'] = snapshot['visibility']
         manifests = []
@@ -132,7 +151,7 @@ def health(data, instant, root):
         result['brief_url'] = latest.get('brief_url')
         if result['state'] == 'finished' and not delivered:
             result['issues'].append('No verified daily report delivery receipt')
-    result['attention'] = bool(result['issues']) or result['state'] in ('missing_run', 'interrupted')
+    result['attention'] = bool(result['issues']) or result['state'] in ('missing_run', 'handoff_unknown', 'interrupted', 'completion_unconfirmed')
     return result
 
 
@@ -146,10 +165,10 @@ def write_health(root, result):
     if not result['issues']:
         lines += ['- 无已记录异常；这不等于独立审计通过。']
     lines += ['', '## 渠道回执', '']
-    lines += [f"- {name}: {value['state']} / {value.get('result', 'unverified')}" for name, value in result['channels'].items()]
+    lines += [f"- {name}: {value['state']} / {value.get('result', 'unverified')} / empty list: {value.get('empty_list', 'unverified')}" for name, value in result['channels'].items()]
     lines += ['', '## 非阻塞说明', ''] + ['- ' + (n if isinstance(n, str) else json.dumps(n, ensure_ascii=False))
                                         for n in result.get('notices', [])]
-    for key in ('execution', 'counts', 'delivery'):
+    for key in ('handoff', 'execution', 'counts', 'delivery'):
         if key in result:
             lines += ['', '## ' + key, '', json.dumps(result[key], ensure_ascii=False)]
     lines += ['', '原始状态：status.json；来源未确认或未处理时保留，白天可手动接续。', '']
@@ -215,7 +234,7 @@ def tick(root, instant):
             result['issues'].append({'power_error': power['power_error']})
             result['attention'] = True
         write_health(root, result)
-        done = result['state'] == 'finished' or minute >= 340 or (minute >= 260 and result['state'] == 'missing_run')
+        done = result['state'] == 'finished' or minute >= 340 or (minute >= 260 and result['state'] in ('missing_run', 'handoff_unknown'))
         if power.get('date') == day and not power.get('released_at') and done:
             release(power, instant)
             atomic(power_path, power)

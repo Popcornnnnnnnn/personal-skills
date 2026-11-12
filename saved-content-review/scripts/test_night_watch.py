@@ -1,4 +1,5 @@
 import json
+import hashlib
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -73,11 +74,66 @@ class NightWatchTest(unittest.TestCase):
         self.assertTrue(h['attention'])
         self.assertFalse(h['model_used'])
 
+    def test_uncertain_handoff_is_distinct_from_missing_receipt(self):
+        with TemporaryDirectory() as d:
+            root = Path(d)
+            path = root / 'handoffs/2026-10-19/processing.json'
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps({'date': '2026-10-19', 'outcome': 'unknown',
+                'observed_at': '2026-10-19T04:00:30+08:00', 'request_id': 'fixture-request',
+                'collector_thread_id': 'fixture-thread'}))
+            h = nw.health({'runs': {}}, datetime.fromisoformat('2026-10-19T08:00:00+08:00'), root)
+            self.assertEqual(h['state'], 'handoff_unknown')
+            path.write_text('{}')
+            self.assertEqual(nw.health({'runs': {}}, datetime.fromisoformat('2026-10-19T08:00:00+08:00'), root)['state'], 'missing_run')
+
     def test_missing_channel_and_expired_run_are_visible(self):
         r = {'id': 'r1', 'date': '2026-10-19', 'kind': 'collect', 'status': 'running', 'started_at': '2026-10-19T04:00:00+08:00'}
         h = nw.health({'runs': {'r1': r}}, datetime.fromisoformat('2026-10-19T08:00:00+08:00'), Path('/unused'))
-        self.assertEqual(h['state'], 'interrupted')
+        self.assertEqual(h['state'], 'completion_unconfirmed')
         self.assertEqual(h['channels']['voice_memos']['state'], 'unverified')
+
+    def test_empty_requires_finished_run_two_inventories_and_unchanged_evidence(self):
+        with TemporaryDirectory() as d:
+            root = Path(d)
+            run = self.finished_with_unavailable_xhs(root)
+            folder = root / 'runs/r1'
+            receipt = {'run_id': 'r1', 'date': run['date'], 'platform': 'douyin',
+                       'account': 'fixture-douyin', 'account_verified': True, 'positive_empty': True,
+                       'accessible_count': 0, 'displayed_total': 0, 'unknown_count': 0,
+                       'pagination_complete': True}
+            for key, name, when in [('source_access', 'before.json', '04:05:00'),
+                                    ('independent_readback', 'after.json', '04:10:00')]:
+                (folder / name).write_text(key)
+                receipt[key] = {'path': name, 'observed_at': f'2026-10-19T{when}+08:00',
+                                'sha256': hashlib.sha256(key.encode()).hexdigest()}
+            (folder / 'empty-douyin.json').write_text(json.dumps(receipt))
+            snapshot = {'account': 'fixture-douyin', 'accessible_count': 0, 'displayed_total': 0,
+                        'unknown_count': 0, 'pagination_complete': True, 'items': []}
+            run['inventories'] = {'douyin': [dict(snapshot, phase='before'), dict(snapshot, phase='after')]}
+            stage = {'id': 'verified_empty', 'platform': 'douyin', 'source_key': None,
+                     'status': 'success', 'started_at': receipt['source_access']['observed_at'],
+                     'ended_at': receipt['independent_readback']['observed_at'], 'cause_proven': False,
+                     'next_step': '', 'evidence': [{'path': str(folder / receipt[k]['path']),
+                        'sha256': receipt[k]['sha256']} for k in ('source_access', 'independent_readback')]}
+            audit = {'version': 1, 'run_id': 'r1', 'date': run['date'], 'stages': [stage],
+                     'counts': {k: 0 for k in ('discovered', 'fully_read', 'saved_verified', 'unfavorited', 'remaining')}}
+            run['audits'] = [{'execution_audit': audit}]
+            instant = datetime.fromisoformat('2026-10-19T08:00:00+08:00')
+            def empty():
+                return nw.health({'runs': {'r1': run}}, instant, root)['channels']['douyin']['empty_list']
+            self.assertEqual(empty(), 'verified_empty')
+            run['status'] = 'running'
+            self.assertEqual(empty(), 'unverified')
+            run['status'] = 'finished'
+            run['inventories']['douyin'][1]['unknown_count'] = None
+            self.assertEqual(empty(), 'unverified')
+            run['inventories']['douyin'][1]['unknown_count'] = 0
+            stage['status'] = 'unknown'
+            self.assertEqual(empty(), 'unverified')
+            stage['status'] = 'success'
+            (folder / 'after.json').write_text('changed')
+            self.assertEqual(empty(), 'unverified')
 
     def test_release_preserves_replacement_session(self):
         p = {'amphetamine_owned': True, 'deadline': '2026-10-19T05:40:00+08:00'}

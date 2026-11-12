@@ -233,12 +233,102 @@ def validate_mutation_outcomes(item, previous, incoming):
         item["mutation_intent_ids"] = seen
 
 
+GAP_ACCEPTANCE = "available_content_with_disclosed_gaps"
+
+
+def validate_gap_acceptance(item):
+    """Validate explicit gap-aware acceptance without claiming full source coverage."""
+    def checked_bytes(reference):
+        if not isinstance(reference, dict):
+            raise ValueError("Gap acceptance needs hashed evidence references")
+        path = Path(reference.get("path", ""))
+        if not path.is_file():
+            raise ValueError("Gap acceptance evidence is missing or changed")
+        content = path.read_bytes()
+        if hashlib.sha256(content).hexdigest() != reference.get("sha256"):
+            raise ValueError("Gap acceptance evidence is missing or changed")
+        return content
+
+    def checked_evidence(references):
+        if not isinstance(references, list) or not references:
+            raise ValueError("Gap acceptance needs processed-source and residual-gap evidence")
+        for reference in references:
+            checked_bytes(reference)
+
+    if (item.get("route") != "knowledge" or item.get("coverage_complete") is not False
+            or item.get("save_outcome") != "verified" or item.get("source_state") == "unknown"
+            or item.get("cleanup_outcome") in {"pending", "unknown"}):
+        raise ValueError("Gap acceptance preserves incomplete coverage and requires a verified save")
+    receipt = json.loads(Path(item.get("gap_acceptance_receipt", "")).read_text())
+    key = item["key"]
+    platform, _, identity = key.partition(":")
+    if platform not in ID_PATTERNS or not re.fullmatch(ID_PATTERNS[platform], identity):
+        raise ValueError("Gap acceptance needs an exact supported source identity")
+    source_url = URL_BASES[platform] + identity
+    note_url = item.get("note_url")
+    match = re.search(r"([0-9a-f]{32}|[0-9a-f-]{36})$", urlsplit(note_url or "").path)
+    if (receipt.get("version") != 1 or receipt.get("criterion") != GAP_ACCEPTANCE
+            or receipt.get("source_key") != key or receipt.get("source_url") != source_url
+            or item.get("url") != source_url or receipt.get("note_url") != note_url
+            or item.get("index_url") != note_url or not match
+            or len(match[1].replace("-", "")) != 32
+            or urlsplit(note_url).hostname != "app.notion.com"):
+        raise ValueError("Gap acceptance must match the exact source and canonical saved note")
+    authorization = json.loads(checked_bytes(receipt.get("authorization")))
+    if (authorization.get("kind") != "explicit_user_available_content_cleanup"
+            or authorization.get("source_key") != key or authorization.get("criterion") != GAP_ACCEPTANCE
+            or not isinstance(authorization.get("request_text"), str) or not authorization["request_text"].strip()):
+        raise ValueError("Gap acceptance needs the user's exact-source completion criterion")
+    review = json.loads(checked_bytes(receipt.get("accessible_review")))
+    if (review.get("source_key") != key or review.get("all_accessible_processed") is not True
+            or review.get("unprocessed_accessible") != []
+            or not isinstance(review.get("processed_material"), list) or not review["processed_material"]
+            or any(not isinstance(value, str) or not value.strip() for value in review["processed_material"])):
+        raise ValueError("Unprocessed accessible material blocks gap-aware cleanup")
+    checked_evidence(review.get("evidence"))
+    readback = json.loads(checked_bytes(receipt.get("note_readback")))
+    if (readback.get("source_key") != key or readback.get("source_url") != source_url
+            or readback.get("note_url") != note_url
+            or str(readback.get("page_id", "")).replace("-", "") != match[1].replace("-", "")
+            or not item.get("save_intent_id") or readback.get("save_intent_id") != item["save_intent_id"]
+            or readback.get("source_verified") is not True or readback.get("content_verified") is not True
+            or not isinstance(readback.get("body"), str) or not readback["body"].strip()):
+        raise ValueError("Gap acceptance needs independent readback of the current exact-source save")
+    observed_at = datetime.fromisoformat(readback.get("observed_at", ""))
+    if observed_at.utcoffset() is None:
+        raise ValueError("Gap acceptance readback needs its actual timezone-aware observation time")
+    checked_evidence(readback.get("evidence"))
+    gaps = receipt.get("residual_gaps")
+    if (not isinstance(gaps, list) or not gaps
+            or any(not isinstance(gap, dict) for gap in gaps)):
+        raise ValueError("Gap acceptance needs explicit residual gaps")
+    ids = [gap.get("id") for gap in gaps]
+    if any(not isinstance(value, str) or not value.strip() for value in ids) or len(set(ids)) != len(ids):
+        raise ValueError("Residual gaps need distinct identities")
+    for gap in gaps:
+        if (any(not isinstance(gap.get(field), str) or not gap[field].strip() for field in ("description", "reason"))
+                or not isinstance(gap.get("note_text"), str) or not gap["note_text"].strip()
+                or gap["note_text"] not in readback["body"]):
+            raise ValueError("Every residual gap must be honestly disclosed in the verified note")
+        checked_evidence(gap.get("evidence"))
+    return True
+
+
+def validate_archive_reading(item, required=False):
+    if item.get("cleanup_acceptance") == GAP_ACCEPTANCE:
+        return validate_gap_acceptance(item)
+    return validate_reading(item, required=required)
+
+
 def ready(item, policy=None):
     if not in_scope(item, policy or {}):
         raise ValueError("Item or folder membership is outside the authorized cleanup scope")
     receipt = json.loads(Path(item["photos_receipt"]).read_text()) if item.get("route") == "photos" else None
     image_photos = receipt is not None and receipt.get("kind") in {"image", "live_photo"}
-    if not all(item.get(k) is True for k in ("archive_verified", "coverage_complete")):
+    gap_accepted = item.get("cleanup_acceptance") == GAP_ACCEPTANCE
+    if gap_accepted:
+        validate_gap_acceptance(item)
+    if item.get("archive_verified") is not True or (item.get("coverage_complete") is not True and not gap_accepted):
         raise ValueError("Archive and reading/media coverage must both be verified")
     if any(item.get(k) in {"pending", "unknown"} for k in ("save_outcome", "cleanup_outcome")):
         raise ValueError("Reconcile unknown external outcomes before cleanup")
@@ -254,7 +344,7 @@ def ready(item, policy=None):
                 or len(set(folders)) != len(folders)):
             raise ValueError("Bilibili cleanup needs exact observed owned-folder IDs")
     if item.get("route") == "knowledge":
-        validate_reading(item, required=item.get("reading_contract_required", False))
+        validate_archive_reading(item, required=item.get("reading_contract_required", False))
         if not str(item.get("note_url", "")).startswith("https://app.notion.com/"):
             raise ValueError("Missing canonical note URL")
     elif item.get("route") == "photos":
@@ -488,6 +578,65 @@ def validate_execution_audit(audit, run):
                 raise ValueError("Stage evidence is missing or changed")
 
 
+
+def verified_empty(run, platform, root):
+    """Read a collector's evidence-backed empty-list receipt; absence is unknown."""
+    path = root / 'runs' / run['id'] / ('empty-' + platform + '.json')
+    try:
+        receipt = json.loads(path.read_text())
+        if (receipt.get('run_id') != run['id'] or receipt.get('date') != run['date']
+                or receipt.get('platform') != platform or receipt.get('account_verified') is not True
+                or receipt.get('positive_empty') is not True or receipt.get('accessible_count') != 0
+                or receipt.get('displayed_total') != 0 or receipt.get('unknown_count') != 0
+                or receipt.get('pagination_complete') is not True):
+            return False
+        if any(type(receipt.get(k)) is not int for k in ('accessible_count', 'displayed_total', 'unknown_count')):
+            return False
+        inventories = run.get('inventories', {}).get(platform, [])
+        for phase in ('before', 'after'):
+            if not any(i.get('phase') == phase and i.get('account') == receipt.get('account')
+                       and i.get('accessible_count') == 0 and i.get('displayed_total') == 0
+                       and i.get('unknown_count') == 0 and i.get('pagination_complete') is True
+                       and all(type(i.get(k)) is int for k in ('accessible_count', 'displayed_total', 'unknown_count'))
+                       and i.get('items') == [] for i in inventories):
+                return False
+        if not receipt.get('account'):
+            return False
+        for key in ('source_access', 'independent_readback'):
+            evidence = receipt[key]
+            instant = datetime.fromisoformat(evidence['observed_at'])
+            start, end = datetime.fromisoformat(run['started_at']), datetime.fromisoformat(run['finished_at'])
+            if (instant.utcoffset() is None or instant.astimezone(TZ).date().isoformat() != run['date']
+                    or start.utcoffset() is None or end.utcoffset() is None or not start <= instant <= end):
+                return False
+            artifact = (path.parent / evidence['path']).resolve()
+            if not artifact.is_relative_to(path.parent.resolve()) or not artifact.is_file():
+                return False
+            if hashlib.sha256(artifact.read_bytes()).hexdigest() != evidence['sha256']:
+                return False
+        if (receipt['source_access']['path'] == receipt['independent_readback']['path']
+                or datetime.fromisoformat(receipt['source_access']['observed_at']) >
+                datetime.fromisoformat(receipt['independent_readback']['observed_at'])):
+            return False
+        expected = {(str((path.parent / receipt[k]['path']).resolve()), receipt[k]['sha256'])
+                    for k in ('source_access', 'independent_readback')}
+        for entry in run.get('audits', []):
+            audit = entry.get('execution_audit')
+            if not isinstance(audit, dict):
+                continue
+            try:
+                validate_execution_audit(audit, run)
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+            for stage in audit['stages']:
+                actual = {(str(Path(e['path']).resolve()), e['sha256']) for e in stage.get('evidence', [])}
+                if stage.get('id') == 'verified_empty' and stage.get('platform') == platform and stage.get('status') == 'success' and expected <= actual:
+                    return True
+        return False
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
@@ -638,7 +787,7 @@ def main():
                 if item.get("route") == "knowledge" and item["status"] in {"archived", "complete"}:
                     if previous.get("status") != "complete":
                         item["reading_contract_required"] = True
-                    validate_reading(item, required=item.get("reading_contract_required", False))
+                    validate_archive_reading(item, required=item.get("reading_contract_required", False))
                 if item["status"] == "complete":
                     ready(item, json.loads((args.root / "trial.json").read_text()))
                     if item.get("cleanup_verified") is not True or item.get("source_state") not in ["not_favorited", "not_in_collection", "not_in_scoped_folders"]:
@@ -658,6 +807,37 @@ def main():
             else:
                 if set(incoming or {}) & {"id", "date", "started_at", "kind", "trigger", "repair_of", "scheduled_for", "events", "inventories", "platforms", "audits"}:
                     raise ValueError("Run identity and original evidence cannot be overwritten by finish")
+                # A zero count is not proof of an empty source. Enforce only at
+                # future finish calls; existing historical receipts are unchanged.
+                result_data = incoming or {}
+                outcome = result_data.get("outcome", "")
+                coverage = result_data.get("coverage", {})
+                counts = result_data.get("counts", {})
+                claimed = set()
+                if isinstance(coverage, dict):
+                    for name, value in coverage.items():
+                        if value == "verified_empty":
+                            platform = "bilibili" if name == "bilibili_default" else name
+                            if platform not in ("xhs", "douyin", "bilibili"):
+                                raise ValueError("Verified-empty claim needs a recognized platform")
+                            claimed.add(platform)
+                scheduled_collection = run.get("kind") == "collect" and run.get("trigger") == "scheduled"
+                if (scheduled_collection and isinstance(outcome, str)
+                        and re.search(r"(?:^|_)empty(?:_|$)", outcome.lower())):
+                    claimed.update(("xhs", "douyin", "bilibili"))
+                success = (isinstance(outcome, str) and (outcome.lower().startswith(("completed", "success"))
+                                                         or outcome.lower() == "pass"))
+                if scheduled_collection and success:
+                    if (not isinstance(counts, dict) or type(counts.get("discovered")) is not int
+                            or counts["discovered"] < 0):
+                        raise ValueError("Successful scheduled completion needs a known discovery count; use an attention outcome when unknown")
+                    if counts["discovered"] == 0:
+                        claimed.update(("xhs", "douyin", "bilibili"))
+                candidate = {**run, "finished_at": instant}
+                missing = [name for name in sorted(claimed) if not verified_empty(candidate, name, args.root)]
+                if missing:
+                    raise ValueError("Empty success needs verified source evidence for: " + ", ".join(missing) +
+                                     "; finish as attention/unverified if sources remain unknown")
                 run.update(incoming or {})
                 run.update(status="finished", finished_at=instant)
                 result = run
