@@ -9,7 +9,7 @@ These are personal working preferences, not universal Notion requirements. A spe
 
 ## Before a write
 
-Read the complete configured owner profile when present. It contains the actual workspace, destinations, per-channel language rules and existing local constraints. Keep those bindings out of public output. If there is no profile, resolve an authorized workspace and destination from the current task before writing. A browser workspace switch does not change a connector's identity.
+Read the configured owner profile when present: read the core profile `SKILL.md` plus only the modular `references/*.md` file(s) relevant to the target destination or operation (load all `references/*.md` only for cross-destination reorganizations or skill maintenance). It contains the actual workspace, destinations, per-channel language rules and existing local constraints. Keep those bindings out of public output. If there is no profile, resolve an authorized workspace and destination from the current task before writing. A browser workspace switch does not change a connector's identity.
 
 Fetch the actual parent, schema and existing record. Search by meaning plus stable source, canonical URL, date or recording identity. Reuse the correct record; avoid parallel inboxes, category copies and workspace-root drafts. An inaccessible target is a reported blocker, not a reason to select another account or sandbox.
 
@@ -47,7 +47,7 @@ Preserve date meanings and user-selected sort/filter/view state. Do not invent a
 
 Use the smallest targeted update. Preserve comments, children, attachments, links, human edits and schema unless the task authorizes changes. Move existing IDs rather than recreate pages during an authorized reorganization. Keep unique material when resolving duplicates; a redirect can preserve links, and deletion remains a separate authorization.
 
-After writing, fetch the affected record and check its actual parent, identity, body, children/media, required Agent attribution and human fields. Verify the rendered UI when acceptance depends on layout or reminder behavior. Reconcile unknown outcomes before retrying and stop once acceptance passes. Installing this skill or configuring a writer does not prove an already-running agent has loaded it.
+After writing, fetch the affected record and check its actual parent, identity, body, children/media, required `Agent` attribution and human fields, plus relevant live view queries when view membership matters. For routine single-item captures or page text updates into an existing database whose schema, views and shared layout are unchanged, API readback and live view queries are sufficient without opening a browser UI, provided you disclose that verification was API-only. Verify the rendered UI when creating a database or changing views, shared layouts, table wrapping or native directory ordering, when checking reminder settings, during batch or migration runs, or when explicitly requested. Reconcile unknown outcomes before retrying and stop once acceptance passes. Installing this skill or configuring a writer does not prove an already-running agent has loaded it.
 
 ## Maintain the method
 
@@ -55,4 +55,4 @@ Keep reusable methods here. Update private destinations, ongoing grants and acco
 
 ## Local owner context
 
-If `~/.config/personal-skills/profiles/notion-writing/SKILL.md` exists, read it once for this task's private destinations, environment and established constraints. Keep that profile local. Verify changing facts live; a saved profile does not grant new access or authorize an unrelated action. Without a configured profile, resolve the required inputs from the current request and authorized tools; never invent the author's account or destination.
+If `~/.config/personal-skills/profiles/notion-writing/SKILL.md` exists, read that core profile plus only the task-relevant `references/*.md` file(s) for this task's private destinations, environment and established constraints. Keep that profile local. Verify changing facts live; a saved profile does not grant new access or authorize an unrelated action. Without a configured profile, resolve the required inputs from the current request and authorized tools; never invent the author's account or destination.

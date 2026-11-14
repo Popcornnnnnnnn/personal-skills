@@ -12,7 +12,7 @@ The author's method keeps one canonical, complete article per source. Capture is
 3. Search stable source identity and canonical URL before creating. Update the canonical existing page where appropriate; similar topics alone are not duplicates.
 4. Write a source-faithful article with the main point, necessary explanation, examples and material uncertainty. Choose structure and length for the source. Do not pad it with execution logs or a mandatory template.
 5. Preserve human dispositions, notes, dates, original links, attachments and IDs. Apply [queue defaults](references/queue.md) only to new records or explicitly authorized field changes.
-6. Read back the saved body, destination, sources and required fields. A successful API response alone does not verify rendered layout or reading coverage.
+6. Read back the saved body, destination, sources, required fields and relevant live view queries. Routine single-item captures in an unchanged library layout do not require rendered UI checks when API-only verification is disclosed; verify the rendered UI when layout or view behavior changes or when requested. Always distinguish actual reading coverage from API delivery.
 
 For an explicitly requested move or split, preserve original IDs where possible and account for every source, unique section, attachment and nonempty property. Categorization does not authorize deletion. Source-favorites cleanup follows a separately authorized `saved-content-review` workflow; saving a note alone does not grant cleanup permission. Pure visual media can use a configured media archive without inventing a knowledge takeaway.
 

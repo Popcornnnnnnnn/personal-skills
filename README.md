@@ -10,12 +10,14 @@ A collection of personal working methods for coding agents, published under the 
 | `delivery` | Carry changes through direct delivery or independent PR review, fixes and authorized completion |
 | `daily-brief-feedback` | Record exact human feedback without inventing preference labels |
 | `doubao-search` | Query Feishu enterprise knowledge and qualify source verification |
+| `english-learning` | Teach related vocabulary and file daily English reviews in Notion |
 | `learn` | Propose evidence-backed lessons and separate saving from rule application |
 | `mac-app-replacement` | Replace apps and verify cleanup of confirmed obsolete copies |
 | `neo-xhs-favorites-inventory` | Reconcile favorites coverage, stable identities and count gaps |
 | `notes` | Keep a complete canonical source article and preserve human judgment |
 | `notion-trash` | Guard selected trash/restore actions and verify the result |
 | `notion-writing` | File readable documents while preserving identity, content and state |
+| `project-audit` | Review a whole project for defects and propose evidence-backed fixes |
 | `saved-content-review` | Separate source coverage, verified archival and authorized cleanup |
 | `shop-search` | Search JD and Taobao through explicitly configured routes |
 | `social-publish` | Prepare truthful platform-specific launch materials locally |
@@ -40,6 +42,7 @@ Use your installed skill directory when running a helper, for example `python3 s
 - `shop-search` needs a configured `cn_scraper_mcp` runtime for its optional signed-search adapter; the legacy JD bridge is optional and explicit-only. No browser cookies ship here.
 - `voice-memo-notion` needs authorized audio access, Python with `requests`, FFmpeg/ffprobe and a configured transcription service. Planning is local; execution can upload audio and incur cost only within the current task's authorization. The author's preference is verified free-only processing.
 - `learn` has an optional `jsonschema` validator. `tell-dot` prefers direct Slack tools; its optional bridge needs an already configured Codex CLI/Slack connection with normal host permissions.
+- `english-learning` uses Python 3 for its local collector (`scripts/collect.py`, with optional harness history adapters), optional image generation and an authorized Notion connector, plus private destination IDs in `~/.config/personal-skills/profiles/english-learning/SKILL.md` when filing daily lessons.
 - An installed `humanizer` can assist prose editing. External tools and skills retain their own licenses and access requirements; they are not included in this package.
 
 Private owner profiles may live at `~/.config/personal-skills/profiles/<skill>/SKILL.md`. They preserve actual destinations, environment and applicable local constraints without publishing them. Read the selected profile before its dependent work. A profile does not grant new rights or turn old receipts into permission. A fresh installation has no preauthorized accounts, cleanup scope, historical exception or schedule.
@@ -57,8 +60,8 @@ Keep configuration private (owner-only directory/files). Store secrets in the us
 
 ## Maintenance and checks
 
-Change reusable methods in Git. Change actual account bindings and ongoing grants only in local owner configuration, within the user's request. Preserve independent checks for source coverage, data integrity, authorization, idempotent recovery and final readback.
+On the author's primary Mac, active local personal skills are authoritative. Whenever creating, revising, renaming, or deleting a personal skill locally, synchronize the change into this repository (including `README.md`), keep private account/destination bindings only in `~/.config/personal-skills/profiles/<skill>/`, keep local manager links pointed at this checkout without broken symlinks, and push after checks pass so GitHub never lags behind local skills. Change actual account bindings and ongoing grants only in local owner configuration within the user's request, and preserve independent checks for source coverage, data integrity, authorization, idempotent recovery and final readback.
 
-Run `python3 tools/check_release.py` for package structure, reference and publication checks. The changed helpers have offline tests in `tests/`; the saved-content ledger also carries its own regression checks. These checks do not prove authenticated service behavior or a successful end-to-end workflow. Test only the actual task's authorized scope.
+Run `python3 tools/check_release.py` for package structure, reference and publication checks. The changed helpers have offline tests in `tests/`, `english-learning/tests/`, and `saved-content-review/scripts/`; the saved-content ledger also carries its own regression checks. These checks do not prove authenticated service behavior or a successful end-to-end workflow. Test only the actual task's authorized scope.
 
 Git history, cached pull-request references and repository discussions need their own privacy review before a private working repository becomes public. A clean current tree or credential scanner alone is insufficient. Package releases should contain tracked files only; private profiles, local compatibility files, caches and execution evidence stay outside the release.

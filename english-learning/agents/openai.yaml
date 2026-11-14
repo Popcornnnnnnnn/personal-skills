@@ -1,0 +1,4 @@
+interface:
+  display_name: "English Learning"
+  short_description: "Learn related words and review your daily English"
+  default_prompt: "Use $english-learning to explain a word and teach me useful related vocabulary."

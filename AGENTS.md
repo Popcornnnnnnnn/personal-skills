@@ -8,6 +8,15 @@ Preserve supported invocation policy and product-specific metadata. Keep each sk
 
 Before editing a linked live checkout, inspect concurrent changes and preserve the active installation. Develop publication changes in an isolated checkout, verify the private profile and old entry points, and deploy only reviewed changes. Keep actual account configuration local. Native manager updates and Git authoring are different operations; protect uncommitted edits in either workflow.
 
+## Authoritative source and sync procedure
+
+On the author's primary Mac, the active local personal skills (linked through the local skill manager to this checkout, plus private bindings under `~/.config/personal-skills/profiles/<skill>/`) are the authoritative source. Whenever a task adds, revises, renames, or deletes any personal skill locally:
+
+1. Apply the corresponding public method update, new sanitized package, rename, or deletion in this repository in the same task.
+2. Keep private identifiers, Notion URLs/UUIDs, account IDs, and host-specific paths strictly inside `~/.config/personal-skills/profiles/<skill>/` (owner-only permissions), never in this public repository.
+3. Keep `~/.cc-switch/skills/<skill>` symlinked to this checkout without unlinked copy drift, and remove broken or retired symlinks across local agent harness directories.
+4. Update `README.md`, run `python3 tools/check_release.py` and relevant offline tests, check `git diff` for private leaks, and commit and push to GitHub so the remote repository stays synchronized.
+
 Use English for commits, Issues and PRs. Use the existing GitHub Issue for continuing work. Keep development/review receipts out of reader documentation. Before public exposure, review the full reachable history and repository discussions, including old pull-request references. Remain private if that history is not safely prepared.
 
 ## Code Review Rules
