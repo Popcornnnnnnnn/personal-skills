@@ -39,3 +39,9 @@ Turn concepts, guides, or workflows into clear, narrated 1080p MP4 walkthrough v
 
 - Stream raw `rgb24` frames into `ffmpeg` with `-nostdin` and **only** video + audio inputs (`-c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p -profile:v high -c:a aac -b:a 192k -shortest -movflags +faststart`). Never mux `-c:s mov_text` on the same `rawvideo` stdin pipe with `-shortest`, which can deadlock FFmpeg's muxer at EOF; if soft-only subtitles are requested, mux them in a second `-nostdin -c copy` pass.
 - Verify the finished `.mp4` with `ffprobe` (confirm `h264` video, `aac` audio, expected duration, and absence of unintended duplicate subtitle streams) before reporting completion.
+
+## 6. Continuous feedback learning and local owner context
+
+- If `~/.config/personal-skills/profiles/walkthrough-video/SKILL.md` exists, read it once at the start of the task (and before handling follow-up video feedback) for local owner defaults, player preferences, and standing skill-update rules. Keep that profile local and owner-only.
+- When the user gives a new reusable requirement, preference, correction, or quality judgment about walkthrough videos (such as voice style, pacing, visual layout, subtitle formatting, encoding reliability, or delivery handoff), separate reusable video-making principles from one-off topic facts or temporary shortcuts so single-session exceptions never cause memory drift.
+- When the local owner profile authorizes automatic updates to `walkthrough-video`, fold the verified reusable lesson directly into the relevant section of `SKILL.md` without creating duplicates, run the repository release check, and sync in the same task. Without an owner profile grant, present a short diff proposal and wait for approval before modifying skill files.
