@@ -37,7 +37,7 @@ Record the exact decision and basis in `POST.md` and `CHECKLIST.md`. Never strip
 ## Writing style and limits
 
 - **Title (`标题`)**: `<=20` UTF-16 characters (`creator.xiaohongshu.com` counts JavaScript `.length`: 1 CJK char = 1, 1 ASCII char/space = 1, surrogate-pair emoji = 2+). Front-load the searchable problem, concrete number, or human hook in the first 10–15 characters because mobile two-column cards truncate around ~16 characters.
-- **Body (`正文`)**: `<=1,000` UTF-16 characters for standard image/video notes, including `#话题` tags at the bottom. Break lines every 1–3 sentences for mobile scanning.
+- **Body (`正文`)**: `<=1,000` UTF-16 characters for standard image/video notes, including `#话题` tags at the bottom. Leave comfortable headroom below `1,000` characters because selecting interactive `#话题` topic pills in `creator.xiaohongshu.com` adds extra characters. Write plain text only (no literal Markdown `**bold**` or `[text](https://...)` link syntax), breaking lines every 1–3 sentences for mobile scanning.
 - **Hashtags (`#话题`)**: Place 3–5 specific tags at the end of the body (for example `#独立开发 #AI工具 #编程日常`). Avoid tag stuffing.
 - **Remove AI tells**: Apply `humanizer` principles to Chinese and English prose alike. Cut stock LLM openers and corporate clichés (`在当今时代`, `众所周知`, `底层逻辑`, `赋能`, `抓手`, `闭环`, `"不是X，而是Y"` / `"不仅…更是…"`, dramatic one-line closers, and emoji-per-line bullet walls). Write in plain, concrete first-person prose grounded in verified facts.
 

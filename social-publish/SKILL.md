@@ -36,7 +36,7 @@ For Reddit, add one subdirectory per community when the angles or rules differ. 
 3. Verify any time-sensitive rules, field limits, media requirements, flairs, disclosure flags, recurring threads, and account gates against current first-party guidance or the live community.
 4. Draft for the destination's native format and reason for caring. Do not start from a universal launch post.
 5. For editable prose (English or Chinese), use the separately installed `humanizer` skill in embedded mode when available. Preserve technical identifiers, required URLs, factual limits, required disclosures, and approved copy.
-6. Recheck facts, character limits, link and anti-diversion rules, media dimensions, on-image text, and community fit after editing. For RedNote packages, run `python3 scripts/check_xiaohongshu.py` from this skill directory (with `--ocr` on macOS once visual assets are rendered).
+6. Recheck facts, character limits, link and anti-diversion rules, media dimensions, on-image text, and community fit after editing. For RedNote packages, run `python3 scripts/check_xiaohongshu.py <package-dir>` from this skill directory (with `--ocr` on macOS once visual assets are rendered).
 7. Save the complete package with final copy, assets, and a short manual checklist. State clearly that nothing was uploaded or published.
 
 ## Platform routing
