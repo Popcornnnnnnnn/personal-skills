@@ -17,13 +17,17 @@ Turn concepts, guides, or workflows into clear, narrated 1080p MP4 walkthrough v
   open -a IINA "<absolute-path-to-video.mp4>"
   ```
 
-## 1. Motion-first visual storytelling (never an auto-paging PPT)
+## 1. 3Blue1Brown visual pedagogy & motion-first design
 
-- **Zero prose paragraphs on canvas**: The voiceover and bottom subtitle bar already carry full sentences. Never place paragraph text or multi-sentence bullet cards on the visual stage, which forces viewers to read two competing text streams at once. Keep total on-screen canvas text under **~10–15 words at any moment** (short 1–4 word labels, hero keywords, or single-line terminal/diff tokens).
-- **Full-bleed cinema stage, not slide headers**: Avoid bulky PowerPoint-style title + subtitle banners across the top of every scene. Use a small, unobtrusive corner chapter pill (such as `02 / 06 • THE ENGINEER'S DESK`) so 85%+ of the 1920x1080 frame belongs to the visual stage.
-- **Concrete visual metaphors and beat-by-beat choreography**: Do not front-load static boxes in the first 2 seconds and leave the screen frozen for 15 seconds. Tie visual state changes directly to every spoken clause (~2.5–4s beats):
-  - **Spotlight active elements**: Dim inactive regions to ~20–30% opacity while lifting, glowing, or expanding the element currently spoken about.
-  - **Animate state transitions**: Use physical/diagrammatic actions — books or files sliding out on demand, character-by-character terminal typing (`> /learn`), gauges filling/clearing, strike-throughs on overridden rules, button click ripples, and pulsing data dots along connectors.
+- **Default to a 3Blue1Brown visual aesthetic**: Favor a deep dark math-slate canvas (`#060A14`–`#090D1A` with subtle dot-grid coordinates when helpful) and clean geometric diagrams, vectors, node-edge graphs, and morphing shapes over boxed SaaS dashboard cards or PowerPoint slide decks.
+- **Intuition before jargon (*Show Evolution, Not Static States*)**: Introduce the concrete visual mechanism, tension, or state transformation *first* so the viewer sees *why* it works before naming the formal term. Place short labels right beside the object they describe at the exact moment the voice names it (*Mayer's Spatial & Temporal Contiguity*).
+- **Strict semantic color continuity**: Assign each core concept one restrained accent color (such as sky blue `#58C4DD` / `#38BDF8`, focal gold `#FBBF24`, emerald `#34D399`, coral `#F87171`, lavender `#A78BFA`) and keep that exact color identity across every scene in the video.
+- **Zero prose paragraphs on canvas (*Mayer's Redundancy Principle*)**: The voiceover and bottom subtitle bar already carry full sentences. Never place paragraph text or multi-sentence bullet cards on the visual stage. Keep total on-screen canvas text under **~10–15 words at any moment** (short 1–4 word labels, hero keywords, or single-line terminal/diff tokens) and replace bulky top slide titles with a compact corner chapter pill (`02 / 06 • TOPIC`).
+- **Spring physics, soft spotlight signaling, and continuous flow**:
+  - **Damped harmonic `spring()` motion**: Drive entrances, scaling, and layer swaps with damped spring curves (`zeta ~ 0.72–0.76`) rather than flat linear or cubic slides.
+  - **Radial spotlight halos (*Signaling Principle*)**: Composite a soft Gaussian-blurred `RGBA` radial glow behind the active node while dimming inactive elements to ~25–35% opacity so the viewer's eye always knows where to look.
+  - **Live micro-transitions & packet streams**: Animate directional packet dots flowing along connectors, slots physically swapping, values scrubbing/redacting live, and gauges filling or resetting on exact spoken beats (~2.5–4s).
+  - **Pass the Mute Fast-Forward Test**: Each scene should prove one clear idea visually so a viewer watching on mute at 2x speed can still follow the story arc.
 - **Phonetic TTS vs. clean display tokens**: Write natural conversational spoken sentences. Spell out symbols phonetically in the TTS input only (`~/.gemini` -> "dot-gemini", `/learn` -> "slash learn", `MCP` -> "M-C-P") while keeping clean technical tokens (`~/.gemini`, `/learn`, `MCP`) on screen and in subtitles.
 
 ## 2. Natural neural voiceover and timing
