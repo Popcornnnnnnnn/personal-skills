@@ -7,7 +7,7 @@ A collection of personal working methods for coding agents, published under the 
 | Skill | Method |
 | --- | --- |
 | `agent-browser` | Choose direct reading or Neo; preserve login and task-tab boundaries |
-| `delivery` | Carry changes through direct delivery or independent PR review, fixes and authorized completion |
+| `delivery` | Carry changes through direct delivery or bounded P0/P1 PR review, fast/slow test tiers and authorized completion |
 | `daily-brief-feedback` | Record exact human feedback without inventing preference labels |
 | `doubao-search` | Query Feishu enterprise knowledge and qualify source verification |
 | `english-learning` | Teach related vocabulary and file daily English reviews in Notion |
