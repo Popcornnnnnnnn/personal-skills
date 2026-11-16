@@ -24,6 +24,7 @@ A collection of personal working methods for coding agents, published under the 
 | `tell-dot` | Hand selected material to a verified Finn/Dot recipient and check delivery |
 | `ui-preferences` | Apply personal interface preferences with clear scope |
 | `voice-memo-notion` | Preserve transcript evidence and verify saved recording notes |
+| `walkthrough-video` | Render narrated 1080p walkthrough videos with neural TTS, preview checks and single-layer subtitles |
 
 ## Install and use
 
