@@ -15,10 +15,14 @@ Turn concepts, guides, or workflows into clear, narrated 1080p MP4 walkthrough v
   open -a IINA "<absolute-path-to-video.mp4>"
   ```
 
-## 1. Storyboard and spoken script
+## 1. Motion-first visual storytelling (never an auto-paging PPT)
 
-- Break the topic into short, focused scenes (typically 12–20 seconds each) with one core visual idea per scene: side-by-side comparison, 3-column mental model, layered stack, budget/progress meter, step-by-step pipeline, or 2x2 summary grid.
-- Write conversational spoken sentences rather than stiff prose. Spell out symbols phonetically in the TTS input only (`~/.gemini` -> "dot-gemini", `/learn` -> "slash learn", `MCP` -> "M-C-P") while keeping clean technical tokens (`~/.gemini`, `/learn`, `MCP`) in the on-screen subtitles.
+- **Zero prose paragraphs on canvas**: The voiceover and bottom subtitle bar already carry full sentences. Never place paragraph text or multi-sentence bullet cards on the visual stage, which forces viewers to read two competing text streams at once. Keep total on-screen canvas text under **~10–15 words at any moment** (short 1–4 word labels, hero keywords, or single-line terminal/diff tokens).
+- **Full-bleed cinema stage, not slide headers**: Avoid bulky PowerPoint-style title + subtitle banners across the top of every scene. Use a small, unobtrusive corner chapter pill (such as `02 / 06 • THE ENGINEER'S DESK`) so 85%+ of the 1920x1080 frame belongs to the visual stage.
+- **Concrete visual metaphors and beat-by-beat choreography**: Do not front-load static boxes in the first 2 seconds and leave the screen frozen for 15 seconds. Tie visual state changes directly to every spoken clause (~2.5–4s beats):
+  - **Spotlight active elements**: Dim inactive regions to ~20–30% opacity while lifting, glowing, or expanding the element currently spoken about.
+  - **Animate state transitions**: Use physical/diagrammatic actions — books or files sliding out on demand, character-by-character terminal typing (`> /learn`), gauges filling/clearing, strike-throughs on overridden rules, button click ripples, and pulsing data dots along connectors.
+- **Phonetic TTS vs. clean display tokens**: Write natural conversational spoken sentences. Spell out symbols phonetically in the TTS input only (`~/.gemini` -> "dot-gemini", `/learn` -> "slash learn", `MCP` -> "M-C-P") while keeping clean technical tokens (`~/.gemini`, `/learn`, `MCP`) on screen and in subtitles.
 
 ## 2. Natural neural voiceover and timing
 
@@ -34,9 +38,9 @@ Turn concepts, guides, or workflows into clear, narrated 1080p MP4 walkthrough v
 
 ## 4. Visual layout and mandatory `--preview` check
 
-- Design on a 1920x1080 grid with clear vertical zones: header badge + title (`y = 40..200`), main visual stage (`y = 235..905`), synced subtitle pill (`y = 925..1020`), and timeline bar (`y = 1038..1050`).
+- Design on a 1920x1080 grid with clear vertical zones: compact corner chapter pill (`y = 40..85`), full-bleed animated stage (`y = 130..900`), synced subtitle pill (`y = 925..1020`), and timeline bar (`y = 1038..1050`).
 - Do **not** rely on system prose fonts (such as `HelveticaNeue.ttc`) for Unicode symbols (`✓`, `✕`, `→`, `▲`), which often render as missing-glyph boxes (`□`). Draw checkmarks, crosses, and arrows as crisp vector lines/polygons in Pillow.
-- Before encoding the full video, run a `--preview` mode that saves one midpoint PNG per scene and visually inspect every PNG to verify contrast, wrapping, icon geometry, and zero overlapping borders or labels.
+- Before encoding the full video, run a `--preview` mode that saves key beat PNGs per scene and visually inspect them to verify low word density, contrast, icon geometry, and zero overlapping elements.
 
 ## 5. Deadlock-free FFmpeg encode and verification
 
