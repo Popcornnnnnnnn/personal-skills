@@ -10,6 +10,7 @@ Turn concepts, guides, or workflows into clear, narrated 1080p MP4 walkthrough v
 ## Workspace and output hygiene
 
 - Write scratch scripts, raw audio clips, preview PNGs, and backup subtitle files inside a dedicated scratch directory (such as the active conversation's `scratch/` folder or `/tmp/<topic>-video/`), never at a workspace or repository root.
+- **Keep one unified video per topic**: When the user asks to expand, clarify, or refine part of the same topic in follow-up feedback, weave the new or revised scenes directly into the single authoritative `.mp4` in logical narrative order (renumbering chapters and rebuilding the single timeline/finale, and removing obsolete fragment `.mp4` files). Produce separate videos only when the user explicitly requests separate episodes or distinct topics.
 - Write the final `.mp4` to the user-requested destination or the active artifact directory. On macOS, **always** include a copy-pasteable IINA launch command in the delivery reply alongside the clickable file link:
   ```bash
   open -a IINA "<absolute-path-to-video.mp4>"
