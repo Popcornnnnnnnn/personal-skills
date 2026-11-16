@@ -9,9 +9,10 @@ Turn concepts, guides, or workflows into clear, narrated 1080p MP4 walkthrough v
 
 ## Workspace and output hygiene
 
-- Write scratch scripts, raw audio clips, preview PNGs, and backup subtitle files inside a dedicated scratch directory (such as the active conversation's `scratch/` folder or `/tmp/<topic>-video/`), never at a workspace or repository root.
-- **Keep one unified video per topic**: When the user asks to expand, clarify, or refine part of the same topic in follow-up feedback, weave the new or revised scenes directly into the single authoritative `.mp4` in logical narrative order (renumbering chapters and rebuilding the single timeline/finale, and removing obsolete fragment `.mp4` files). Produce separate videos only when the user explicitly requests separate episodes or distinct topics.
-- Write the final `.mp4` to the user-requested destination or the active artifact directory. On macOS, **always** include a copy-pasteable IINA launch command in the delivery reply alongside the clickable file link:
+- **Central output library**: Write the final `.mp4` directly to the canonical video folder configured in the local owner profile (or `~/Movies/` on macOS when collecting generated videos in one library, unless the user explicitly specifies another path for the task). Name files clearly in kebab-case or snake_case by topic so the library stays publish-ready.
+- **Keep one unified video per topic**: When the user asks to expand, clarify, or refine part of the same topic in follow-up feedback, weave the new or revised scenes directly into that single authoritative `.mp4` in logical narrative order (renumbering chapters and rebuilding the single timeline/finale, and removing obsolete fragment `.mp4` files). Produce separate videos only when the user explicitly requests separate episodes or distinct topics.
+- **Retain scratch while iterating; clean up after explicit acceptance**: Store intermediate outputs (render scripts, raw TTS clips, padded WAVs, silence metadata, preview PNGs, backup `.srt` files, and temporary preview copies) inside a dedicated scratch directory while iterating so revisions stay fast, never at a workspace root. **Do not delete intermediate files prematurely**; once the user **explicitly accepts** the video, remove all intermediate scratch outputs and temporary copies, then verify that the final `.mp4` in the central output folder remains intact.
+- On macOS, **always** include a copy-pasteable IINA launch command pointing to the central output file alongside its clickable file link:
   ```bash
   open -a IINA "<absolute-path-to-video.mp4>"
   ```
