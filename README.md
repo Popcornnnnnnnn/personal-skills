@@ -25,6 +25,7 @@ A collection of personal working methods for coding agents, published under the 
 | `ui-preferences` | Apply personal interface preferences with clear scope |
 | `voice-memo-notion` | Preserve transcript evidence and verify saved recording notes |
 | `walkthrough-video` | Render narrated 1080p walkthrough videos with neural TTS, preview checks and single-layer subtitles |
+| `x-search` | Search public X posts through a configured SocialData account |
 
 ## Install and use
 
@@ -45,6 +46,7 @@ Use your installed skill directory when running a helper, for example `python3 s
 - `learn` has an optional `jsonschema` validator. `tell-dot` prefers direct Slack tools; its optional bridge needs an already configured Codex CLI/Slack connection with normal host permissions.
 - `english-learning` uses Python 3 for its local collector (`scripts/collect.py`, with optional harness history adapters), optional image generation and an authorized Notion connector, plus private destination IDs in `~/.config/personal-skills/profiles/english-learning/SKILL.md` when filing daily lessons.
 - `social-publish` includes an offline Xiaohongshu preflight checker (`scripts/check_xiaohongshu.py`, Python 3; optional `--ocr` uses macOS Vision via `swift` to scan slides for text and QR codes). An installed `humanizer` can assist prose editing. External tools and skills retain their own licenses and access requirements; they are not included in this package.
+- `x-search` uses Python 3 and a SocialData API key supplied via `SOCIALDATA_API_KEY` or a private macOS Keychain profile. Searches may consume account credit.
 
 Private owner profiles may live at `~/.config/personal-skills/profiles/<skill>/SKILL.md`. They preserve actual destinations, environment and applicable local constraints without publishing them. Read the selected profile before its dependent work. A profile does not grant new rights or turn old receipts into permission. A fresh installation has no preauthorized accounts, cleanup scope, historical exception or schedule.
 
