@@ -11,6 +11,7 @@ A collection of personal working methods for coding agents, published under the 
 | `daily-brief-feedback` | Record exact human feedback without inventing preference labels |
 | `doubao-search` | Query Feishu enterprise knowledge and qualify source verification |
 | `english-learning` | Teach related vocabulary and file daily English reviews in Notion |
+| `google-flow` | Drive Google Flow and Google Flow Music in BrowserOS neo with login, credit, and download checks |
 | `learn` | Propose evidence-backed lessons and separate saving from rule application |
 | `mac-app-replacement` | Replace apps and verify cleanup of confirmed obsolete copies |
 | `neo-xhs-favorites-inventory` | Reconcile favorites coverage, stable identities and count gaps |
@@ -40,6 +41,7 @@ Use your installed skill directory when running a helper, for example `python3 s
 ## Tools and private setup
 
 - Browser workflows need a separately installed BrowserOS neo connection and its current usage guide. `agent-browser` keeps the author's Neo preference while honoring an explicit browser choice.
+- `google-flow` uses BrowserOS neo and the user's existing Google session for `flow.google.com` and `flowmusic.app`, with optional private account notes in `~/.config/personal-skills/profiles/google-flow/SKILL.md`.
 - Notion workflows need an authorized connector and verified live destinations. The trash helper is an optional separate credentialed supplement, with a hidden setup prompt and guarded actions.
 - `shop-search` needs a configured `cn_scraper_mcp` runtime for its optional signed-search adapter; the legacy JD bridge is optional and explicit-only. No browser cookies ship here.
 - `voice-memo-notion` needs authorized audio access, Python with `requests`, FFmpeg/ffprobe and a configured transcription service. Planning is local; execution can upload audio and incur cost only within the current task's authorization. The author's preference is verified free-only processing.
