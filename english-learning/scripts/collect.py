@@ -299,25 +299,116 @@ class Review:
                 self.problem(item, 'a Gemini CLI transcript could not be read completely')
     def antigravity(self):
         root = self.home/'.gemini/antigravity'
-        item = self.status('Antigravity', (root/'conversations').is_dir())
-        if not (root/'conversations').is_dir():
+        brain = root/'brain'
+        convs = root/'conversations'
+        all_transcripts = sorted(brain.glob('*/.system_generated/logs/transcript.jsonl')) if brain.is_dir() else []
+        if not all_transcripts:
+            item = self.status('Antigravity', convs.is_dir())
+            if not convs.is_dir():
+                return
+            py = self.home/'.local/share/hindsight/venv/bin/python'
+            if not py.is_file():
+                self.problem(item, 'the verified local Antigravity decoder is unavailable')
+                return
+            try:
+                proc = subprocess.run([str(py), '-B', str(HERE/'antigravity.py'), str(self.home), str(self.start), str(self.end)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=120)
+                if proc.returncode:
+                    raise ValueError('decoder failure')
+                result = json.loads(proc.stdout)
+                item['files_scanned'] = result['files_scanned']
+                if result['errors'] or result['missing_time'] or result['unknown_fields']:
+                    self.problem(item, 'some Antigravity messages could not be verified or dated')
+                for m in result['messages']:
+                    self.add('Antigravity', m['time'], m['text'])
+            except (OSError, ValueError, KeyError, subprocess.TimeoutExpired):
+                self.problem(item, 'the verified local Antigravity decoder could not read the history')
             return
-        py = self.home/'.local/share/hindsight/venv/bin/python'
-        if not py.is_file():
-            self.problem(item, 'the verified local Antigravity decoder is unavailable')
-            return
-        try:
-            proc = subprocess.run([str(py), '-B', str(HERE/'antigravity.py'), str(self.home), str(self.start), str(self.end)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=120)
-            if proc.returncode:
-                raise ValueError('decoder failure')
-            result = json.loads(proc.stdout)
-            item['files_scanned'] = result['files_scanned']
-            if result['errors'] or result['missing_time'] or result['unknown_fields']:
-                self.problem(item, 'some Antigravity messages could not be verified or dated')
-            for m in result['messages']:
-                self.add('Antigravity', m['time'], m['text'])
-        except (OSError, ValueError, KeyError, subprocess.TimeoutExpired):
-            self.problem(item, 'the verified local Antigravity decoder could not read the history')
+        item = self.status('Antigravity', True)
+        sidecar_projects = set()
+        config_path = self.home/'.gemini/config/config.json'
+        if config_path.is_file():
+            try:
+                cfg = json.loads(config_path.read_text())
+                for entry in (cfg.get('sidecars') or {}).values():
+                    if isinstance(entry, dict) and isinstance(entry.get('projectId'), str) and entry['projectId']:
+                        sidecar_projects.add(entry['projectId'])
+            except (OSError, ValueError, AttributeError):
+                pass
+        summaries, cparents = {}, {}
+        summary_db = root/'conversation_summaries.db'
+        if summary_db.is_file():
+            try:
+                conn = sqlite3.connect(summary_db.as_uri()+'?mode=ro', uri=True)
+                try:
+                    tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                    if 'conversation_summaries' in tables:
+                        cols = {r[1] for r in conn.execute('PRAGMA table_info(conversation_summaries)')}
+                        if 'project_id' in cols:
+                            summaries = {r[0]: (r[1] or '') for r in conn.execute('SELECT conversation_id, project_id FROM conversation_summaries')}
+                    if 'conversation_parents' in tables:
+                        cparents = {r[0]: (r[1] or '') for r in conn.execute('SELECT conversation_id, parent_id FROM conversation_parents')}
+                finally:
+                    conn.close()
+            except (sqlite3.Error, OSError):
+                pass
+        def root_project(cid):
+            seen = set()
+            cur = cid
+            while cur and cur not in seen:
+                seen.add(cur)
+                if cur in summaries:
+                    return summaries[cur]
+                cur = cparents.get(cur, '')
+            return ''
+        for path in all_transcripts:
+            try:
+                if path.stat().st_mtime < self.start:
+                    continue
+                cid = path.parts[-4]
+                if root_project(cid) in sidecar_projects:
+                    continue
+                rows, incomplete = jsonl(path)
+                if incomplete:
+                    self.problem(item, 'an Antigravity transcript had an incomplete final record')
+                item['files_scanned'] += 1
+                full_lines = None
+                for line_idx, row in enumerate(rows):
+                    if row.get('type') != 'USER_INPUT' or row.get('source') != 'USER_EXPLICIT':
+                        continue
+                    stamp = timestamp(row.get('created_at'))
+                    if stamp is None:
+                        self.problem(item, 'an Antigravity message lacked a valid timestamp')
+                        continue
+                    if not self.start <= stamp < self.end:
+                        continue
+                    content = row.get('content', '')
+                    if 'content' in (row.get('truncated_fields') or []):
+                        if full_lines is None:
+                            full_path = path.with_name('transcript_full.jsonl')
+                            if full_path.is_file():
+                                try:
+                                    full_lines, _ = jsonl(full_path)
+                                except (OSError, ValueError, json.JSONDecodeError):
+                                    full_lines = []
+                            else:
+                                full_lines = []
+                        if line_idx < len(full_lines) and isinstance(full_lines[line_idx].get('content'), str):
+                            content = full_lines[line_idx]['content']
+                        else:
+                            self.problem(item, 'an Antigravity transcript had truncated user content')
+                    if not isinstance(content, str):
+                        continue
+                    if '<USER_REQUEST>' in content and '</USER_REQUEST>' in content:
+                        extracted = content.split('<USER_REQUEST>', 1)[1].split('</USER_REQUEST>', 1)[0]
+                    elif '<USER_REQUEST>' in content:
+                        extracted = content.split('<USER_REQUEST>', 1)[1]
+                        extracted = re.split(r'\n?<(?:ADDITIONAL_METADATA|USER_SETTINGS_CHANGE)>', extracted, maxsplit=1)[0]
+                    else:
+                        extracted = re.sub(r'<(?:ADDITIONAL_METADATA|USER_SETTINGS_CHANGE)>[\s\S]*?</(?:ADDITIONAL_METADATA|USER_SETTINGS_CHANGE)>', '', content)
+                    if extracted.strip():
+                        self.add('Antigravity', row.get('created_at'), extracted)
+            except (OSError, ValueError, json.JSONDecodeError):
+                self.problem(item, 'an Antigravity transcript could not be read completely')
     def raycast_say_in_english(self):
         pointer = self.home/'.config/say-in-english/sync-path'
         target = self.home/'.config/say-in-english/history.json'

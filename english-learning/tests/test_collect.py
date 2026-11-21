@@ -160,6 +160,63 @@ class CollectorTest(unittest.TestCase):
         r3 = collect.Review(self.home, START, END)
         r3.raycast_say_in_english()
         self.assertEqual(r3.coverage['Raycast Say in English']['status'], 'partial')
+    def test_antigravity_transcripts_main_sidechat_truncation_and_sidecar_filter(self):
+        cfg = self.home/'.gemini/config/config.json'
+        cfg.parent.mkdir(parents=True)
+        cfg.write_text(json.dumps({'sidecars': {'watcher': {'projectId': 'sidecar-proj'}}}))
+        sdb = self.home/'.gemini/antigravity/conversation_summaries.db'
+        sdb.parent.mkdir(parents=True)
+        db = sqlite3.connect(sdb)
+        db.executescript('CREATE TABLE conversation_summaries(conversation_id TEXT PRIMARY KEY, nesting_depth INTEGER, project_id TEXT); CREATE TABLE conversation_parents(conversation_id TEXT PRIMARY KEY, parent_id TEXT);')
+        db.executemany('INSERT INTO conversation_summaries VALUES (?,?,?)', [
+            ('main-chat', 0, 'user-proj'),
+            ('sidecar-chat', 0, 'sidecar-proj'),
+        ])
+        db.executemany('INSERT INTO conversation_parents VALUES (?,?)', [
+            ('side-chat', 'main-chat'),
+            ('sidecar-child', 'sidecar-chat'),
+        ])
+        db.commit()
+        db.close()
+
+        at = '2026-11-02T17:00:00Z'
+        def write_transcript(cid, rows, full_rows=None):
+            logs = self.home/f'.gemini/antigravity/brain/{cid}/.system_generated/logs'
+            write_lines(logs/'transcript.jsonl', rows)
+            if full_rows is not None:
+                write_lines(logs/'transcript_full.jsonl', full_rows)
+
+        long_req = '<USER_REQUEST>\nFull truncated question here.\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nignored\n</ADDITIONAL_METADATA>'
+        write_transcript('main-chat', [
+            {'type': 'USER_INPUT', 'source': 'USER_EXPLICIT', 'created_at': at, 'content': '<USER_REQUEST>\nWhy is this cut off?\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nmeta\n</ADDITIONAL_METADATA>'},
+            {'type': 'USER_INPUT', 'source': 'USER_EXPLICIT', 'created_at': '2026-11-02T17:01:00Z', 'truncated_fields': ['content'], 'content': 'Full trunc...'},
+            {'type': 'USER_INPUT', 'source': 'USER_EXPLICIT', 'created_at': '2026-11-02T15:59:59Z', 'content': '<USER_REQUEST>\nYesterday\n</USER_REQUEST>'},
+        ], full_rows=[
+            {'type': 'USER_INPUT', 'source': 'USER_EXPLICIT', 'created_at': at, 'content': '<USER_REQUEST>\nWhy is this cut off?\n</USER_REQUEST>'},
+            {'type': 'USER_INPUT', 'source': 'USER_EXPLICIT', 'created_at': '2026-11-02T17:01:00Z', 'content': long_req},
+            {'type': 'USER_INPUT', 'source': 'USER_EXPLICIT', 'created_at': '2026-11-02T15:59:59Z', 'content': '<USER_REQUEST>\nYesterday\n</USER_REQUEST>'},
+        ])
+        write_transcript('side-chat', [
+            {'type': 'USER_INPUT', 'source': 'USER_EXPLICIT', 'created_at': '2026-11-02T17:02:00Z', 'content': '<USER_REQUEST>\nSide chat question.\n</USER_REQUEST>'},
+        ])
+        write_transcript('subagent-chat', [
+            {'type': 'SYSTEM_MESSAGE', 'source': 'SYSTEM', 'created_at': at, 'content': 'Subagent prompt'},
+        ])
+        write_transcript('sidecar-chat', [
+            {'type': 'USER_INPUT', 'source': 'USER_EXPLICIT', 'created_at': at, 'content': '<USER_REQUEST>\nSidecar prompt.\n</USER_REQUEST>'},
+        ])
+        write_transcript('sidecar-child', [
+            {'type': 'USER_INPUT', 'source': 'USER_EXPLICIT', 'created_at': at, 'content': '<USER_REQUEST>\nSidecar child prompt.\n</USER_REQUEST>'},
+        ])
+
+        self.review.antigravity()
+        self.assertEqual([m['text'].strip() for m in self.review.messages], [
+            'Why is this cut off?',
+            'Full truncated question here.',
+            'Side chat question.',
+        ])
+        self.assertEqual(self.review.coverage['Antigravity']['status'], 'available')
+        self.assertEqual(self.review.coverage['Antigravity']['files_scanned'], 3)
 
 if __name__ == '__main__':
     unittest.main()
