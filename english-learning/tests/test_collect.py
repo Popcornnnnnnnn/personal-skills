@@ -110,6 +110,56 @@ class CollectorTest(unittest.TestCase):
         parts = [p for batch in collect.batches(messages) for p in batch]
         self.assertEqual(''.join(p['text'] for p in parts if p['message']==1), messages[0]['text'])
         self.assertTrue(all(len(batch)<=30 for batch in collect.batches(messages)))
+    def test_raycast_say_in_english_default_sync_path_tombstones_and_errors(self):
+        default_path = self.home/'.config/say-in-english/history.json'
+        default_path.parent.mkdir(parents=True)
+        in_ms = int(START*1000) + 1000
+        out_ms = int((START - 1)*1000)
+        payload = {
+            'version': 1,
+            'entries': [
+                {'query': '续费', 'phrases': ['renew'], 'subtitle': 'renew', 'ipa': '', 'updatedAt': in_ms},
+                {'query': 'situated', 'phrases': ['situated'], 'subtitle': '/ˈsɪtʃueɪtɪd/  Located in a particular place.', 'ipa': '/ˈsɪtʃueɪtɪd/', 'updatedAt': in_ms + 1000},
+                {'query': 'gantry', 'phrases': ['gantry'], 'subtitle': 'A supporting frame.', 'ipa': '/ˈɡæntri/', 'updatedAt': in_ms + 2000},
+                {'query': 'deleted-item', 'phrases': ['gone'], 'updatedAt': in_ms},
+                {'query': 're-queried', 'phrases': ['back again'], 'updatedAt': in_ms + 5000},
+                {'query': 'yesterday', 'phrases': ['old'], 'updatedAt': out_ms},
+            ],
+            'deleted': {'Deleted-Item': in_ms, 're-queried': in_ms},
+        }
+        default_path.write_text(json.dumps(payload))
+        self.review.raycast_say_in_english()
+        texts = [m['text'] for m in self.review.messages]
+        self.assertEqual(texts, [
+            '[Raycast "Say in English" lookup] Query: 续费 | Suggested English: renew',
+            '[Raycast "Say in English" lookup] Query: situated | Meaning: /ˈsɪtʃueɪtɪd/  Located in a particular place.',
+            '[Raycast "Say in English" lookup] Query: gantry | Meaning: A supporting frame. | IPA: /ˈɡæntri/',
+            '[Raycast "Say in English" lookup] Query: re-queried | Suggested English: back again',
+        ])
+        self.assertEqual(self.review.coverage['Raycast Say in English']['status'], 'available')
+
+        # Custom sync-path with ~/ expansion and a malformed entry
+        custom_dir = self.home/'custom-sync'
+        custom_dir.mkdir()
+        sync_file = custom_dir/'hist.json'
+        (self.home/'.config/say-in-english/sync-path').write_text('\n~/custom-sync/hist.json\n')
+        sync_file.write_text(json.dumps({
+            'version': 1,
+            'entries': [
+                {'query': '人机验证', 'phrases': ['CAPTCHA'], 'updatedAt': in_ms + 2000},
+                {'query': '', 'updatedAt': in_ms},
+            ],
+        }))
+        r2 = collect.Review(self.home, START, END)
+        r2.raycast_say_in_english()
+        self.assertEqual([m['text'] for m in r2.messages], ['[Raycast "Say in English" lookup] Query: 人机验证 | Suggested English: CAPTCHA'])
+        self.assertEqual(r2.coverage['Raycast Say in English']['status'], 'partial')
+
+        # Missing configured sync-path target reports partial
+        sync_file.unlink()
+        r3 = collect.Review(self.home, START, END)
+        r3.raycast_say_in_english()
+        self.assertEqual(r3.coverage['Raycast Say in English']['status'], 'partial')
 
 if __name__ == '__main__':
     unittest.main()

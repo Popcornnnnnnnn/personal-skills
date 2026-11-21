@@ -15,10 +15,24 @@ from google.protobuf import message_factory
 pool, _ = schema_pool(root / 'research/antigravity-history/main.js')
 step_class = message_factory.GetMessageClass(pool.FindMessageTypeByName('gemini_coder.Step'))
 meta_class = message_factory.GetMessageClass(pool.FindMessageTypeByName('exa.cortex_pb.CortexStepMetadata'))
+sidecar_projects = set()
+config_path = home / '.gemini/config/config.json'
+if config_path.is_file():
+    try:
+        cfg = json.loads(config_path.read_text())
+        for entry in (cfg.get('sidecars') or {}).values():
+            if isinstance(entry, dict) and isinstance(entry.get('projectId'), str) and entry['projectId']:
+                sidecar_projects.add(entry['projectId'])
+    except (OSError, ValueError, AttributeError):
+        pass
 summary_db = home / '.gemini/antigravity/conversation_summaries.db'
 folder = home / '.gemini/antigravity/conversations'
 conn = sqlite3.connect(summary_db.as_uri() + '?mode=ro', uri=True)
-parents = {r[0]: r[1] for r in conn.execute('SELECT conversation_id,nesting_depth FROM conversation_summaries')}
+cols = {r[1] for r in conn.execute('PRAGMA table_info(conversation_summaries)')}
+if 'project_id' in cols:
+    parents = {r[0]: (r[1], r[2] or '') for r in conn.execute('SELECT conversation_id,nesting_depth,project_id FROM conversation_summaries')}
+else:
+    parents = {r[0]: (r[1], '') for r in conn.execute('SELECT conversation_id,nesting_depth FROM conversation_summaries')}
 conn.close()
 messages, errors, scanned, missing_time, unknown = [], [], 0, 0, 0
 for path in folder.glob('*.db'):
@@ -27,7 +41,8 @@ for path in folder.glob('*.db'):
     if path.stem not in parents:
         errors.append('conversation metadata unavailable')
         continue
-    if parents[path.stem]:
+    depth, project_id = parents[path.stem]
+    if depth or (project_id and project_id in sidecar_projects):
         continue
     try:
         db = sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)

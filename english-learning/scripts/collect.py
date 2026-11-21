@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import sqlite3
@@ -317,6 +318,74 @@ class Review:
                 self.add('Antigravity', m['time'], m['text'])
         except (OSError, ValueError, KeyError, subprocess.TimeoutExpired):
             self.problem(item, 'the verified local Antigravity decoder could not read the history')
+    def raycast_say_in_english(self):
+        pointer = self.home/'.config/say-in-english/sync-path'
+        target = self.home/'.config/say-in-english/history.json'
+        configured = False
+        if pointer.is_file():
+            try:
+                for line in pointer.read_text().splitlines():
+                    raw = line.strip()
+                    if raw:
+                        if raw == '~':
+                            target = self.home
+                        elif raw.startswith('~/'):
+                            target = self.home/raw[2:]
+                        else:
+                            target = Path(raw)
+                        configured = True
+                        break
+            except OSError:
+                pass
+        if not target.is_file():
+            item = self.status('Raycast Say in English', configured)
+            if configured:
+                self.problem(item, 'configured Raycast Say in English sync file not found')
+            return
+        item = self.status('Raycast Say in English', True)
+        try:
+            data = json.loads(target.read_text())
+            if not isinstance(data, dict) or not isinstance(data.get('entries'), list):
+                raise ValueError('unknown Raycast Say in English history format')
+            raw_deleted = data.get('deleted', {})
+            if raw_deleted is None:
+                raw_deleted = {}
+            if not isinstance(raw_deleted, dict):
+                raise ValueError('unknown Raycast Say in English deleted map')
+            deleted = {}
+            for raw_key, raw_ts in raw_deleted.items():
+                if isinstance(raw_key, str) and isinstance(raw_ts, (int, float)) and not isinstance(raw_ts, bool) and math.isfinite(raw_ts) and raw_ts > 0:
+                    k = raw_key.strip().casefold()
+                    if k:
+                        deleted[k] = max(deleted.get(k, 0), raw_ts)
+            item['files_scanned'] = 1
+            for entry in data['entries']:
+                if not isinstance(entry, dict):
+                    self.problem(item, 'a Raycast Say in English entry could not be read or dated')
+                    continue
+                query = entry.get('query')
+                updated_at = entry.get('updatedAt')
+                if not isinstance(query, str) or not query.strip() or not isinstance(updated_at, (int, float)) or isinstance(updated_at, bool) or not math.isfinite(updated_at):
+                    self.problem(item, 'a Raycast Say in English entry could not be read or dated')
+                    continue
+                query = query.strip()
+                if deleted.get(query.casefold(), 0) >= updated_at:
+                    continue
+                parts = [f'[Raycast "Say in English" lookup] Query: {query}']
+                raw_phrases = entry.get('phrases')
+                phrases = [p.strip() for p in raw_phrases if isinstance(p, str) and p.strip()] if isinstance(raw_phrases, list) else []
+                non_self_phrases = [p for p in phrases if p.casefold() != query.casefold()]
+                subtitle = entry.get('subtitle').strip() if isinstance(entry.get('subtitle'), str) else ''
+                ipa = entry.get('ipa').strip() if isinstance(entry.get('ipa'), str) else ''
+                if non_self_phrases:
+                    parts.append('Suggested English: ' + '; '.join(non_self_phrases))
+                elif subtitle and subtitle.casefold() != query.casefold():
+                    parts.append('Meaning: ' + subtitle)
+                if ipa and ipa not in parts[-1]:
+                    parts.append('IPA: ' + ipa)
+                self.add('Raycast Say in English', updated_at, ' | '.join(parts))
+        except (OSError, ValueError, json.JSONDecodeError):
+            self.problem(item, 'Raycast Say in English history file could not be read')
     def unknown_harnesses(self):
         # Only flag stores, not skills-only folders or auth/configuration files.
         for name, paths in {
@@ -373,7 +442,7 @@ def main():
         parser.error('the requested day has not started yet')
     end = min(datetime.combine(day + timedelta(days=1), time.min, zone).timestamp(), now)
     review = Review(HOME_DIR, start, end)
-    for adapter in (review.codex, review.pi, review.opencode, review.dsh, review.zcode, review.antigravity, review.claude, review.gemini, review.unknown_harnesses):
+    for adapter in (review.codex, review.pi, review.opencode, review.dsh, review.zcode, review.antigravity, review.claude, review.gemini, review.raycast_say_in_english, review.unknown_harnesses):
         adapter()
     review.messages.sort(key=lambda m: (m['time'], m['source']))
     for item in review.coverage.values():
