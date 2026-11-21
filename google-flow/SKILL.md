@@ -17,8 +17,8 @@ Drive **Google Flow** (`https://flow.google.com/`) for AI video, images, storybo
 
 1. If `~/.config/personal-skills/profiles/google-flow/SKILL.md` exists, read it once for the authorized Google account and standing credit rules.
 2. Open the target studio (`https://flow.google.com/` or `https://www.flowmusic.app/`) and check sign-in status:
-   - In **Google Flow**, open `Account details` to confirm the active email, plan badge (`PRO`), and current **Google Flow credits** balance + reset date.
-   - In **Google Flow Music**, open `Settings menu` (or `https://www.flowmusic.app/settings`) to confirm the active handle, plan tier (`PLUS` / `Free` / `Member`), and available **credits**.
+   - In **Google Flow**, open `Account details` to confirm the active email, plan badge (`PRO` / `ULTRA` / Free), and current **Google Flow credits** balance + reset date. When multiple Google accounts are signed in, open the intended `/u/<N>/` index or use `Account details` -> `Switch account`.
+   - In **Google Flow Music**, open `Settings menu` (or `https://www.flowmusic.app/settings`) to confirm the active email/handle, plan tier (`Free` / `Starter` / `Plus` / `Member`), and available **credits**. To switch Google accounts in Flow Music, use `Settings menu` -> `Log out` and sign back in — never click `Connect another Google account` unless the user wants to link accounts.
 3. If the session is logged out, points to the wrong Google account, lands on an OAuth consent popup (`page_out_of_scope`), or triggers verification/captcha, stop and hand off to the user via `request_human_help` / `await_human_help`.
 4. Confirm before running large, multi-output (`x2`–`x4`), or high-cost video/song generation batches so account credits are never spent unexpectedly.
 
@@ -29,7 +29,7 @@ Drive **Google Flow** (`https://flow.google.com/`) for AI video, images, storybo
    - **Left navigation**: `All media`, `Characters` (6 archetype starters plus prompt/upload consistency builder), `Scenes` (timeline/scene sequence builder), `Library` + `Create collection`, `Tools` (`My Tools`, `Community`, `Templates`), `Create tool`, and `Trash`.
    - **Right Flow Agent panel**: Conversational assistant (`What do you want to create?`), `Open session history`, and `Agent settings` (`Confirm before generating`: `Always` / `Never`, `Image defaults`, `Video defaults`).
 3. **Configure model and parameters before prompting**:
-   - **Video defaults** (`Agent settings` -> `Video defaults`): `Omni 1.2 Flash` (default), `Veo 3.1 - Lite` (and other active models shown in the radio list), aspect ratio (`16:9`, `9:16`), and number of outputs (`x1`–`x4`).
+   - **Video defaults** (`Agent settings` -> `Video defaults`): `Omni 1.2 Flash` (default), `Veo 3.1 - Lite` (plus lower-priority/ultra options and other active models shown in the radio list), aspect ratio (`16:9`, `9:16`), and number of outputs (`x1`–`x4`).
    - **Image generation** (`Settings trigger` inside the prompt box or `Agent settings` -> `Image defaults`): `Nano Banana 2.1` (default), `Nano Banana Pro`, `Nano Banana 2 Lite`, aspect ratio (`16:9`, `4:3`, `1:1`, `3:4`, `9:16`), thinking level (`Low`, `Medium`, `High`), and number of outputs (`x1`–`x4`).
    - **Inputs**: Add reference frames or visual ingredients via `Add ingredients to the prompt box` or `Add media menu`.
 4. **Generate and verify**:
