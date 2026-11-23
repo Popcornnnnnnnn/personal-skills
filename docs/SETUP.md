@@ -17,6 +17,7 @@ Per-skill external dependencies and private settings layout for `personal-skills
 ## Per-Skill External Dependencies
 
 - **`agent-browser` / `google-flow`:** Require a separately installed **BrowserOS neo** connection and active browser login sessions (`flow.google.com` / `flowmusic.app` for `google-flow`).
+- **`iphone-wireless`:** Requires macOS with full Xcode, a pre-signed WebDriverAgent runner with Wi-Fi debugging enabled ("Connect via network" in Xcode), `appium` (`xcuitest` driver), `@wdio/mcp`, and `~/.local/bin/iphone-wireless`.
 - **`notion-trash`:** Optional separate credentialed supplement with guarded trash/restore verification.
 - **`shop-search`:** Needs a configured `cn_scraper_mcp` runtime (or explicit legacy JD bridge); no cookies ship in this repository.
 - **`voice-memo-notion`:** Needs authorized audio access, Python `requests`, `ffmpeg`/`ffprobe`, and a configured transcription service (local planning vs task-authorized upload).

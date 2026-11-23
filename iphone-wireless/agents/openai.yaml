@@ -1,0 +1,6 @@
+interface:
+  display_name: "iPhone Wireless"
+  short_description: "Control physical iPhone wirelessly via Appium and wdio-mcp"
+  default_prompt: "Use $iphone-wireless to ensure Wi-Fi WDA + Appium are ready via iphone-wireless start and run the iPhone task through wdio-mcp."
+policy:
+  allow_implicit_invocation: true
