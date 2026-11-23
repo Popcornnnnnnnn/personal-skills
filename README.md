@@ -29,7 +29,7 @@ flowchart LR
 | `project-audit` | Review a whole project for defects and propose evidence-backed fixes |
 | `saved-content-review` | Separate source coverage, verified archival, and authorized cleanup |
 | `shop-search` | Search JD and Taobao through explicitly configured routes |
-| `social-publish` | Prepare truthful platform-specific launch and creator packages locally |
+| `social-publish` | Prepare truthful platform-specific launch packages and a pre-publish Notion review gate |
 | `tell-dot` | Hand selected material to a verified Finn/Dot recipient and check delivery |
 | `ui-preferences` | Apply personal interface preferences with clear scope |
 | `voice-memo-notion` | Preserve transcript evidence and verify saved recording notes |
