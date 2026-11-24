@@ -1,0 +1,6 @@
+interface:
+  display_name: "LinkGet"
+  short_description: "Download offline article archives (X Articles, web, WeChat) and media/transcripts via linkget"
+  default_prompt: "Use $linkget to archive articles or download media/transcripts with --non-interactive --json."
+policy:
+  allow_implicit_invocation: true

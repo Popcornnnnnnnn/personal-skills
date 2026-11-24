@@ -9,7 +9,7 @@ flowchart LR
     B["Private Local Profile (~/.config/personal-skills/profiles/)"] -->|"Loaded on Demand"| C
 ```
 
-## Skills (22 Packages)
+## Skills (23 Packages)
 
 | Skill | Method |
 | --- | --- |
@@ -21,6 +21,7 @@ flowchart LR
 | `google-flow` | Drive Google Flow and Google Flow Music in BrowserOS neo with login, credit, and download checks |
 | `iphone-wireless` | Drive a physical iPhone over Wi-Fi via `iphone-wireless`, local Appium, and `wdio-mcp` |
 | `learn` | Propose evidence-backed lessons and separate saving from rule application |
+| `linkget` | Download offline article archives (X Articles, WeChat, Toutiao, Zhihu, web), media, and transcripts via the local `linkget` CLI |
 | `mac-app-replacement` | Replace apps and verify cleanup of confirmed obsolete copies |
 | `neo-xhs-favorites-inventory` | Reconcile favorites coverage, stable identities, and count gaps |
 | `notes` | Keep a complete canonical source article and preserve human judgment |
