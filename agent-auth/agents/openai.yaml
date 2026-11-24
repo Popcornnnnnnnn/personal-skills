@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agent Auth"
+  short_description: "Guarded SMS, Email, QR, Desktop WeChat, TOTP, and SSO authentication flows"
+  default_prompt: "Use $agent-auth to handle login challenges safely through ~/.local/bin/agent-auth under Tier 1/2/3 guardrails."
+policy:
+  allow_implicit_invocation: true

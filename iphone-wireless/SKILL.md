@@ -36,7 +36,12 @@ Operate a physical iPhone over Wi-Fi using Appium + `wdio-mcp` backed by an on-d
    - Call `snapshot` to read the accessibility tree and element refs (`[ref=eN]`).
    - Act using refs (`click_element`, `set_value`, `perform_actions`, `scroll`, or `enable_tools` for mobile-specific tools like `tap_element`, `swipe`, `list_apps`, `get_app_state`, `hide_keyboard`).
    - Call `get_screenshot` whenever visual verification is needed or the accessibility tree is missing/ambiguous.
-3. **Close cleanly:**
+3. **Direct WDA fast paths (`~/.local/bin/iphone-wireless`) for accessibility stalls or multi-hop UI:**
+   - `iphone-wireless screenshot --out <path>` captures WDA `/screenshot` directly as a PNG without querying the app's accessibility tree.
+   - `iphone-wireless tap --x <px> --y <py> --from-image-size <WxH>` reuses the active WDA session, anchors `defaultActiveApplication` to `com.apple.springboard`, and sends a scaled viewport tap without stalling on frozen pickers (restoring `"auto"` afterward).
+   - `iphone-wireless open-url --url <url> [--bundle-id <id>]` and `iphone-wireless activate --bundle-id <id>` navigate URLs or foreground apps directly in one call.
+   - `iphone-wireless save-url-to-photos --url <url>` opens an image URL in Safari, long-presses, and clicks `Save to Photos` / `存储到“照片”` in one shot.
+4. **Close cleanly:**
    - Call `close_session` with `{"detach": false}` when finished so the Appium session ends cleanly while WDA stays ready for the next task.
 
 ## Security and human boundaries

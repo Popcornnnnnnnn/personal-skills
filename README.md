@@ -9,10 +9,11 @@ flowchart LR
     B["Private Local Profile (~/.config/personal-skills/profiles/)"] -->|"Loaded on Demand"| C
 ```
 
-## Skills (23 Packages)
+## Skills (24 Packages)
 
 | Skill | Method |
 | --- | --- |
+| `agent-auth` | Automate SMS/email OTPs, desktop WeChat quick-login, Keychain TOTP, and Chrome-to-iPhone QR logins under 3-tier guardrails |
 | `agent-browser` | Choose direct reading or Neo; preserve login and task-tab boundaries |
 | `daily-brief-feedback` | Record exact human feedback without inventing preference labels |
 | `delivery` | Carry changes through direct delivery or bounded P0/P1 PR review, fast/slow test tiers, and authorized completion |
