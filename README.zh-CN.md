@@ -32,7 +32,7 @@ flowchart LR
 | `notion-trash` | 保护选定的移入回收站/恢复操作并核验结果 |
 | `notion-writing` | 编写结构清晰的文档，同时保留原页面身份、内容与状态 |
 | `project-audit` | 对整个项目进行缺陷审计并提出有证据支撑的修复方案 |
-| `saved-content-review` | 分离来源覆盖率、已核验归档与授权清理 |
+| `saved-content-review` | 分离来源覆盖率、已核验归档与授权清理，支持配置收集时间 |
 | `shop-search` | 通过明确配置的渠道搜索京东与淘宝商品 |
 | `social-publish` | 准备如实的各平台发布物料与发布前 Notion 审核门控 |
 | `tell-dot` | 将选定材料交付给经过核验的 Finn/Dot 接收方并检查送达状态 |

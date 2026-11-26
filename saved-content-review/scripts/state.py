@@ -476,7 +476,10 @@ def due(data, policy):
     runs = list(data["runs"].values())
     collections = [r for r in runs if r.get("kind", "collect") == "collect"]
     minute = instant.hour * 60 + instant.minute
-    missing = [d for d in dates if (d < day or (d == day and minute >= 240))
+    collect_hour, collect_minute = map(int, policy.get("collect_at", "04:00").split(":"))
+    collection_start = instant.replace(hour=collect_hour, minute=collect_minute, second=0, microsecond=0)
+    start_minute = collect_hour * 60 + collect_minute
+    missing = [d for d in dates if (d < day or (d == day and minute >= start_minute))
                and not any(r["date"] == d and r["status"] == "finished" for r in collections)]
     today = [r for r in collections if r["date"] == day and r["status"] == "finished"]
     brief_hour, brief_minute = map(int, policy.get("brief_at", "04:00").split(":"))
@@ -485,18 +488,17 @@ def due(data, policy):
     if any(r["status"] == "running" and instant - datetime.fromisoformat(r["started_at"]) < timedelta(minutes=90) for r in runs):
         return {**result, "action": "none", "reason": "active_lease"}
     end_hour, end_minute = map(int, policy.get("primary_window_end", "07:30").split(":"))
-    primary = 240 <= minute < end_hour * 60 + end_minute
+    primary = start_minute <= minute < end_hour * 60 + end_minute
     recovery = policy.get("recovery", {})
     if recovery.get("automatic") is False and not primary:
-        if 235 <= minute < 240:
+        if 0 < (collection_start - instant).total_seconds() <= 300:
             return {**result, "action": "none", "reason": "early_execution_window",
-                    "wait_until": instant.replace(hour=4, minute=0, second=0, microsecond=0).isoformat()}
+                    "wait_until": collection_start.isoformat()}
         return {**result, "action": "none", "reason": "daytime_recovery_disabled"}
     slots = [480] + [int(h) * 60 for h in recovery.get("hours", [10, 16, 22])]
     in_window = primary or any(start <= minute < start + 90 for start in slots)
     final_day = not continuous and day == dates[-1]
     if not in_window or (final_day and minute >= 570):
-        collect_hour, collect_minute = map(int, policy.get("collect_at", "04:00").split(":"))
         starts = [(collect_hour, collect_minute)]
         if not final_day:
             starts += [(int(hour), 0) for hour in recovery.get("hours", [10, 16, 22])]
@@ -651,8 +653,10 @@ def main():
     with ledger(args.root) as data:
         instant = now().isoformat()
         if args.command == "begin":
+            policy_file = args.root / "trial.json"
+            policy = json.loads(policy_file.read_text()) if policy_file.exists() else {}
             if args.trigger != "manual":
-                decision = due(data, json.loads((args.root / "trial.json").read_text()))
+                decision = due(data, policy)
                 expected = "repair" if args.repair_of else "collect"
                 if (decision["action"] != expected or decision.get("trigger") != args.trigger
                         or (args.repair_of and decision.get("repair_of") != args.repair_of)):
@@ -680,7 +684,7 @@ def main():
                 run_id = now().strftime("%Y%m%dT%H%M%S%f")
                 run = {"id": run_id, "date": day, "started_at": instant, "status": "running", "platforms": {}, "events": [],
                        "kind": "repair" if args.repair_of else "collect", "trigger": args.trigger,
-                       "scheduled_for": day + "T04:00:00+08:00"}
+                       "scheduled_for": day + "T" + policy.get("collect_at", "04:00") + ":00+08:00"}
                 if args.repair_of:
                     run["repair_of"] = args.repair_of
                 data["runs"][run_id] = run

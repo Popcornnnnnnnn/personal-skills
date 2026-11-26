@@ -560,6 +560,18 @@ class StateTests(unittest.TestCase):
         (self.root / "state.json").write_text(json.dumps(self.data()))
         self.assertEqual(self.call("begin", None, "--trigger", "manual")["run"]["trigger"], "manual")
 
+    def test_configured_collection_time_controls_due_and_receipt(self):
+        self.policy["collect_at"] = "04:20"
+        self.policy["recovery"]["automatic"] = False
+        (self.root / "trial.json").write_text(json.dumps(self.policy))
+        self.clock = self.clock.replace(minute=17)
+        early = state.due(self.data(), self.policy)
+        self.assertEqual(early["wait_until"], "2026-10-18T04:20:00+08:00")
+        self.assertEqual(early["missing_dates"], [])
+        self.clock = self.clock.replace(minute=20)
+        run = self.call("begin", None, "--trigger", "scheduled")["run"]
+        self.assertEqual(run["scheduled_for"], "2026-10-18T04:20:00+08:00")
+
     def test_mechanism_discard_cannot_change_out_of_scope_membership(self):
         self.policy["bilibili_scope"] = {"folder_ids": ["910612620"]}
         (self.root / "trial.json").write_text(json.dumps(self.policy))
