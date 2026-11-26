@@ -1,5 +1,7 @@
 # Personal skills
 
+**English** · [简体中文](README.zh-CN.md)
+
 Personal working methods and reusable workflows for coding agents ([MIT License](LICENSE)).
 Defaults reflect explicit preferences—BrowserOS neo for web tasks, compact desktop UIs, explicit human authorization, and readback-verified completion—while user requests and project rules always take priority.
 
