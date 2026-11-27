@@ -17,7 +17,7 @@ flowchart LR
 | --- | --- |
 | `agent-auth` | Automate SMS/email OTPs, desktop WeChat quick-login, Keychain TOTP, and Chrome-to-iPhone QR logins under 3-tier guardrails |
 | `agent-browser` | Choose direct reading or Neo; preserve login and task-tab boundaries |
-| `council` | Run an independent review with Codex and Gemini Neon, then verify findings |
+| `council` | Run an independent review with Codex, Gemini Neon, and Command Code DeepSeek V4.1 Flash, then verify findings |
 | `daily-brief-feedback` | Record exact human feedback without inventing preference labels |
 | `delivery` | Carry changes through direct delivery or bounded P0/P1 PR review, fast/slow test tiers, and authorized completion |
 | `doubao-search` | Query Feishu enterprise knowledge and qualify source verification |
