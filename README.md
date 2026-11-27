@@ -22,7 +22,7 @@ flowchart LR
 | `delivery` | Carry changes through direct delivery or bounded P0/P1 PR review, fast/slow test tiers, and authorized completion |
 | `doubao-search` | Query Feishu enterprise knowledge and qualify source verification |
 | `english-learning` | Teach related vocabulary and file daily English reviews in Notion |
-| `google-flow` | Drive Google Flow and Google Flow Music in BrowserOS neo with login, credit, and download checks |
+| `google-flow` | Drive Google Flow and Google Flow Music in BrowserOS neo with login, credit, download, and local depth-map prep checks |
 | `iphone-wireless` | Drive a physical iPhone over Wi-Fi via `iphone-wireless`, local Appium, and `wdio-mcp` |
 | `learn` | Propose evidence-backed lessons and separate saving from rule application |
 | `linkget` | Download offline article archives (X Articles, WeChat, Toutiao, Zhihu, web), media, and transcripts via the local `linkget` CLI |
@@ -56,4 +56,4 @@ python3 tools/check_release.py
 ```
 
 - Authoritative local skills stay symlinked (`~/.cc-switch/skills/<skill>` → this checkout) and sync directly to GitHub after passing release and privacy checks.
-- Offline unit tests cover `tests/`, `english-learning/tests/`, `social-publish/tests/`, and `saved-content-review/scripts/` (these do not test live authenticated services).
+- Offline unit tests cover `tests/`, `english-learning/tests/`, `google-flow/scripts/`, `social-publish/tests/`, and `saved-content-review/scripts/` (these do not test live authenticated services).

@@ -22,7 +22,7 @@ flowchart LR
 | `delivery` | 通过直接交付或有界 P0/P1 PR 评审、快/慢测试分层以及授权合入完成变更交付 |
 | `doubao-search` | 查询飞书企业知识并标注来源核验情况 |
 | `english-learning` | 讲解关联词汇并将每日英语复习归档到 Notion |
-| `google-flow` | 通过 BrowserOS neo 驱动 Google Flow 与 Google Flow Music，并校验登录、额度与下载结果 |
+| `google-flow` | 通过 BrowserOS neo 驱动 Google Flow 与 Google Flow Music，并校验登录、额度、下载及本地深度图预处理结果 |
 | `iphone-wireless` | 通过 `iphone-wireless`、本地 Appium 与 `wdio-mcp` 无线控制真机 iPhone |
 | `learn` | 提炼有证据支撑的经验教训，并将“保存记录”与“应用为规则”分离 |
 | `linkget` | 通过本地 `linkget` CLI 下载离线文章归档（X Articles、微信、头条、知乎及网页）、媒体文件与转录文本 |
@@ -56,4 +56,4 @@ python3 tools/check_release.py
 ```
 
 - 本地权威技能保持软链接状态（`~/.cc-switch/skills/<skill>` → 本仓库检出目录），在通过发布与隐私检查后直接同步至 GitHub。
-- 离线单元测试覆盖 `tests/`、`english-learning/tests/`、`social-publish/tests/` 与 `saved-content-review/scripts/`（这些测试不覆盖需要实时认证的线上服务）。
+- 离线单元测试覆盖 `tests/`、`english-learning/tests/`、`google-flow/scripts/`、`social-publish/tests/` 与 `saved-content-review/scripts/`（这些测试不覆盖需要实时认证的线上服务）。

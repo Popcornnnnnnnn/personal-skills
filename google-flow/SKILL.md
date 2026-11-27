@@ -38,6 +38,31 @@ Drive **Google Flow** (`https://flow.google.com/`) for AI video, images, storybo
    - Download finished media through BrowserOS neo `download` to the user's requested path and verify the saved file exists and is non-empty before reporting success.
 5. **Privacy awareness**: If the user needs prompts excluded from product-improvement review, check `More options` -> `Help improve Flow` (and `Account details` -> `Visible watermarking` if clean exports are needed) and confirm the user's preference before changing settings.
 
+## Reference-video remake workflow (Depth Map + Omni 1.2 Flash)
+
+Use the packaged helper [scripts/flow_video_prep.py](scripts/flow_video_prep.py) (`uv run` + `ffmpeg`/`ffprobe`) together with **BrowserOS neo** to remake viral/reference videos into new character casts without tripping Flow's live-action/copyright moderation or installing unofficial scraper CLIs.
+
+1. **Inspect and trim to `<= 15s`**:
+   - Run `python3 scripts/flow_video_prep.py probe <input.mp4>` to verify resolution, FPS, audio, and whether `duration_sec <= 15` (`fits_flow_15s`). Trim longer clips into `<= 15s` segments with `prep` first.
+2. **Convert real-person / copyrighted references to grayscale depth video locally**:
+   - Run `uv run scripts/flow_video_prep.py depth <input.mp4> -o <depth.mp4>` (runs `Depth-Anything-V2` on Apple Silicon MPS / CUDA / CPU and outputs silent H.264 `yuv420p` with near = bright/white, far = dark/black).
+   - Depth video strips recognizable faces, textures, and watermarks while preserving blocking, pacing, and camera motion so Flow moderation passes. (For exact 1:1 facial micro-expression or finger fidelity rather than blocking/camera transfer, note depth maps omit fine expression/finger detail.)
+3. **Prepare single-character sheets**:
+   - Generate or upload **individual** character turnaround/reference images (e.g., `Nano Banana 2.1` inside the same Flow project costs `0` video credits; approve any first-time upload rights dialog in the UI if prompted).
+   - **Never** attach a multi-person composite group image alongside the depth video — it locks camera framing to a single frontal angle and suppresses scene cuts.
+4. **Attach media carefully in Flow (`+` asset picker)**:
+   - Upload the depth MP4 and character images via **BrowserOS neo**'s native `upload` tool (never `gflow-cli` or unofficial internal endpoints).
+   - Open `+`, switch to the **`Videos`** tab **first** to attach `<depth.mp4>`, and **verify the prompt footer displays the video duration (e.g., `15s` / `15 秒`)** before switching to **`Images`** to select single-character sheets. (Generated images push videos out of "Recent", and submitting without the video attached silently runs an `8s` image-only generation.)
+5. **Prompting rules for clean character swaps**:
+   - Bind replacements by **clothing/visual features**, never screen position (`left`/`right` breaks as soon as actors cross).
+   - Explicitly state that character reference images lock **face/appearance and outfit only**, while motion, framing, cuts, lighting, and stage follow the reference video.
+   - Keep prompts concise and direct; heavy stacks of negative rules ("must", "strictly forbid") increase validation failures and stiffen motion.
+6. **Draft-first cost gate, audio remux, and QA contact sheet**:
+   - Check and report the displayed credit cost and remaining Flow credits before submitting. Run a **`360p` (`x1`, ~20 credits for 15s)** draft first.
+   - Download the result via BrowserOS neo, restore original audio with `python3 scripts/flow_video_prep.py remux --video <gen.mp4> --audio-from <orig.mp4> -o <final.mp4>`, and render a 6-frame side-by-side comparison sheet with `python3 scripts/flow_video_prep.py compare --original <orig.mp4> --generated <final.mp4> -o <compare.png>`.
+   - Visually inspect `<compare.png>` before confirming a **`720p` (60 credits)** re-render or **`1080p` download upscale (+5 credits)**.
+7. **Cross-harness fallback**: If the current agent session lacks direct `browseros-neo` MCP tools, delegate the BrowserOS neo UI upload, generation, and download steps to an enabled harness that has `browseros-neo` connected (or connect `browseros-neo` MCP first) rather than falling back to non-BrowserOS scrapers.
+
 ## Google Flow Music workflow (`https://www.flowmusic.app/`)
 
 1. **Start or resume a session**: Click `New session` (`https://www.flowmusic.app/session`) or open an existing session/song from `Songs`, `Playlists`, `Music videos`, `Spaces`, or `Projects`.

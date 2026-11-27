@@ -23,7 +23,7 @@ Each harness discovers skills from its own user and project locations. Many also
 ## Per-Skill External Dependencies
 
 - **`council`:** Requires a host that can delegate to both Codex and Gemini. In T3 Code, enable the Codex and Antigravity providers. Council defaults to GPT-6.2 Sol and Gemini 4 Neon. Each reviewer uses the host’s configured access.
-- **`agent-browser` / `google-flow`:** Require a separately installed **BrowserOS neo** connection and active browser login sessions (`flow.google.com` / `flowmusic.app` for `google-flow`).
+- **`agent-browser` / `google-flow`:** Require a separately installed **BrowserOS neo** connection and active browser login sessions (`flow.google.com` / `flowmusic.app` for `google-flow`). Optional reference-video prep in `google-flow/scripts/flow_video_prep.py` uses `ffmpeg`/`ffprobe` and `uv` (downloading `torch`, `transformers`, `numpy`, `pillow`, and `Depth-Anything-V2` weights on first `depth` run).
 - **`iphone-wireless`:** Requires macOS with full Xcode, a pre-signed WebDriverAgent runner with Wi-Fi debugging enabled ("Connect via network" in Xcode), `appium` (`xcuitest` driver), `@wdio/mcp`, and `~/.local/bin/iphone-wireless`.
 - **`linkget`:** Requires the local `linkget` CLI (`brew install Popcornnnnnnnn/tap/linkget`) and its runtime tools (`gallery-dl`, `yt-dlp`, `ffmpeg`, `exiftool`, `deno`); full X Articles also require saved `x.com` sessions (`linkget auth x`) or an authenticated BrowserOS neo / Chrome reader.
 - **`notion-trash`:** Optional separate credentialed supplement with guarded trash/restore verification.
