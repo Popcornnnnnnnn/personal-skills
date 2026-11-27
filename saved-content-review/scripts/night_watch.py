@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 import subprocess
 from zoneinfo import ZoneInfo
-from state import nonblocking_unavailable, verified_empty
+from state import nonblocking_unavailable, run_platforms, settled_item, verified_empty
 
 TZ = ZoneInfo('Asia/Shanghai')
 ROOT = Path.home() / 'Library/Application Support/saved-content-review'
@@ -106,9 +106,9 @@ def health(data, instant, root):
                 continue  # The original failure remains in failure_history.
             key = blocker.get('key') if isinstance(blocker, dict) else None
             current = data.get('items', {}).get(key, {}) if key else {}
-            if current.get('status') not in ('complete', 'discarded'):
+            if not settled_item({'key': key or '', **current}):
                 result['issues'].append(blocker)
-        for name in ('xhs', 'douyin', 'bilibili'):
+        for name in run_platforms(latest):
             evidence = next((r.get('coverage', {}).get(name) for r in reversed(runs)
                              if isinstance(r.get('coverage', {}).get(name), dict)), None)
             result['channels'][name] = {'state': 'receipt_present' if evidence is not None else 'unverified', 'coverage': evidence}

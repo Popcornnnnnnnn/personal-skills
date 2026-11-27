@@ -16,6 +16,14 @@ If a public media lookup exposes no media while the exact post plays in the auth
 
 Verify the current account and exact owned folder memberships. Process only the selected folders. Removing one membership is not global unfavoriting; preserve unrelated memberships. An authenticated CLI and rendered page can be independent evidence when both are available.
 
+## TikTok Favorites
+
+Use the owner profile's `tiktok.json` for the authorized account and first collection day. Confirm the signed-in Profile handle and selected Favorites → Posts tab in Neo. Keep Collections, Liked and uploads out of scope. Record the displayed Posts total, stable numeric IDs and canonical creator post URLs. Compare unique cards to the displayed total and retain a count gap if pagination ends or access fails early. An empty collection needs explicit no-posts evidence.
+
+Open a post from Favorites when direct navigation fails. Confirm that the open player or photo carousel belongs to the selected ID before reading. For video, inspect duration, audio and visual carriers. Fetch only caption URLs exposed for the exact post and check the whole track against the video's timeline and relevant visuals. Use the existing reading and recognition rules for gaps. For media archival, use the configured full-original route and verify every item. If only the browser player is available and the installed tools cannot obtain the exact source media, retain it with the precise gap.
+
+TikTok is archive-only. Deduplicate by `tiktok:<post-id>` and canonical URL against the ledger and Reading Inbox. After independent archive and index verification, record `archived` with `save_outcome:verified` and the archive readback path. Treat verified TikTok archives as reconciliation on later runs, even if they are still favorited. Re-enumerate and report retained archives separately from work pending. Do not use the favorite toggle, change collection membership, or record TikTok as a removal.
+
 ## Cleanup
 
 Normal cleanup requires authorization plus verified archival, adequate source/media coverage, canonical saved/index identity and readback. A single source may have several memberships; record precisely what was removed.

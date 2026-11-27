@@ -25,7 +25,7 @@ question; do not guess from ASR output. Follow [reading acceptance](references/r
 
 Verify source coverage, canonical saved content and required media/index readback before a source is eligible for normal cleanup. Preserve the user's disposition and all unrelated memberships. Removing one collection membership does not prove global removal.
 
-Cleanup needs the current task's authorization or a verified, still-applicable owner grant. A historical example in this package is never a grant. Platform-confirmed invalid records use separate criteria and receipts; anonymous count gaps and access errors never justify guessing a deletion target.
+Cleanup needs the current task's authorization or a verified, still-applicable owner grant. A historical example in this package is never a grant. For archive-only sources such as explicitly configured TikTok Favorites, record a verified save as `archived` and reconcile it on later runs. Platform-confirmed invalid records use separate criteria and receipts; anonymous count gaps and access errors never justify guessing a deletion target.
 
 Use the local state ledger only after scope is configured. `scripts/state.py --help` describes the existing checkpoint interface. It records observed evidence and protects state atomically; it does not perform remote cleanup or establish human permission. Scope/state files live outside this repository. Consult [recovery](references/recovery.md) for retries and [audit](references/audit.md) for acceptance.
 
@@ -67,7 +67,7 @@ cannot independently establish the truth of a source observation. A count gap,
 missing receipt, failed access, or empty Reading Inbox is not a verified empty list.
 `state.py finish` rejects a platform `verified_empty` claim without that evidence.
 For the scheduled collection, an empty outcome or a completed outcome with zero
-discoveries requires verified-empty evidence for all three scoped platforms. If
+discoveries requires verified-empty evidence for every platform enabled in that run. If
 any source is unknown or unavailable, finish with an attention/unverified outcome
 and preserve unknown counts; do not call the whole collection empty.
 

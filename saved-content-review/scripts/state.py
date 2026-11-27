@@ -3,7 +3,7 @@
 import argparse
 from collections import Counter
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import fcntl
 import hashlib
 import json
@@ -16,21 +16,54 @@ from zoneinfo import ZoneInfo
 
 ROOT = Path.home() / "Library/Application Support/saved-content-review"
 TZ = ZoneInfo("Asia/Shanghai")
+BASE_PLATFORMS = ("xhs", "douyin", "bilibili")
+TIKTOK_PROFILE = Path.home() / ".config/personal-skills/profiles/saved-content-review/tiktok.json"
+
+
 def configured_accounts():
     path = Path.home() / '.config/personal-skills/settings.json'
     if not path.exists():
-        return {key: '' for key in ('xhs', 'douyin', 'bilibili')}
+        return {key: '' for key in BASE_PLATFORMS}
     value = json.loads(path.read_text()).get('saved_content_review', {}).get('accounts', {})
     if not isinstance(value, dict) or any(not isinstance(v, str) for v in value.values()):
         raise ValueError('Invalid saved-content account configuration')
-    return {key: value.get(key, '') for key in ('xhs', 'douyin', 'bilibili')}
+    return {key: value.get(key, '') for key in BASE_PLATFORMS}
 
 
 ACCOUNTS = configured_accounts()
-ID_PATTERNS = {"xhs": r"[0-9a-f]{24}", "douyin": r"[0-9]+", "bilibili": r"BV[0-9A-Za-z]{10}"}
+ID_PATTERNS = {"xhs": r"[0-9a-f]{24}", "douyin": r"[0-9]+",
+               "bilibili": r"BV[0-9A-Za-z]{10}", "tiktok": r"[0-9]+"}
 URL_BASES = {"xhs": "https://www.xiaohongshu.com/explore/", "douyin": "https://www.douyin.com/video/",
-             "bilibili": "https://www.bilibili.com/video/"}
+             "bilibili": "https://www.bilibili.com/video/", "tiktok": "https://www.tiktok.com/"}
 STATES = {"pending", "pending_read", "needs_decision", "failed", "archived", "complete", "discarded"}
+
+
+def tiktok_account_on(day):
+    """An unavailable TikTok profile must not interrupt the other sources."""
+    try:
+        scope = json.loads(TIKTOK_PROFILE.read_text())
+        starts_on = date.fromisoformat(scope["starts_on"])
+        account = scope["account"]
+        if re.fullmatch(r"[A-Za-z0-9_.]+", account) and date.fromisoformat(day) >= starts_on:
+            return account
+    except (OSError, ValueError, TypeError, KeyError):
+        pass
+    return None
+
+
+def run_platforms(run):
+    return run.get("enabled_platforms", BASE_PLATFORMS)
+
+
+def settled_item(item):
+    return (
+        item.get("status") in {"complete", "discarded"}
+        or (
+            item.get("key", "").startswith("tiktok:")
+            and item.get("status") == "archived"
+            and item.get("save_outcome") == "verified"
+        )
+    )
 
 
 def now():
@@ -173,7 +206,7 @@ def item_plan(item, request, policy=None):
     """Plan the existing item's next step; never execute an external action."""
     if not in_scope(item, policy or {}):
         return {"action": "report", "reason": "outside_authorized_source_scope", "allow_external_retry": False}
-    if item.get("status") in {"complete", "discarded"}:
+    if settled_item(item):
         return {"action": "reconcile", "reason": "completed_source_dedup", "allow_external_retry": False}
     unknown = [k for k in ("save_outcome", "cleanup_outcome") if item.get(k) in {"pending", "unknown"}]
     if unknown or item.get("source_state") == "unknown":
@@ -262,8 +295,8 @@ def validate_gap_acceptance(item):
     receipt = json.loads(Path(item.get("gap_acceptance_receipt", "")).read_text())
     key = item["key"]
     platform, _, identity = key.partition(":")
-    if platform not in ID_PATTERNS or not re.fullmatch(ID_PATTERNS[platform], identity):
-        raise ValueError("Gap acceptance needs an exact supported source identity")
+    if platform not in BASE_PLATFORMS or not re.fullmatch(ID_PATTERNS[platform], identity):
+        raise ValueError("Gap acceptance needs an exact supported cleanup source identity")
     source_url = URL_BASES[platform] + identity
     note_url = item.get("note_url")
     match = re.search(r"([0-9a-f]{32}|[0-9a-f-]{36})$", urlsplit(note_url or "").path)
@@ -320,9 +353,7 @@ def validate_archive_reading(item, required=False):
     return validate_reading(item, required=required)
 
 
-def ready(item, policy=None):
-    if not in_scope(item, policy or {}):
-        raise ValueError("Item or folder membership is outside the authorized cleanup scope")
+def verify_archive(item):
     receipt = json.loads(Path(item["photos_receipt"]).read_text()) if item.get("route") == "photos" else None
     image_photos = receipt is not None and receipt.get("kind") in {"image", "live_photo"}
     gap_accepted = item.get("cleanup_acceptance") == GAP_ACCEPTANCE
@@ -331,18 +362,12 @@ def ready(item, policy=None):
     if item.get("archive_verified") is not True or (item.get("coverage_complete") is not True and not gap_accepted):
         raise ValueError("Archive and reading/media coverage must both be verified")
     if any(item.get(k) in {"pending", "unknown"} for k in ("save_outcome", "cleanup_outcome")):
-        raise ValueError("Reconcile unknown external outcomes before cleanup")
+        raise ValueError("Reconcile unknown external outcomes before archive acceptance")
     if not image_photos:
         if item.get("index_verified") is not True:
             raise ValueError("Index readback must be verified for this route")
         if not str(item.get("index_url", "")).startswith("https://app.notion.com/"):
             raise ValueError("Missing verified index URL")
-    if item["key"].startswith("bilibili:"):
-        folders = item.get("folder_ids", [])
-        if (not isinstance(folders, list) or not folders
-                or any(not isinstance(f, str) or not re.fullmatch(r"[0-9]+", f) for f in folders)
-                or len(set(folders)) != len(folders)):
-            raise ValueError("Bilibili cleanup needs exact observed owned-folder IDs")
     if item.get("route") == "knowledge":
         validate_archive_reading(item, required=item.get("reading_contract_required", False))
         if not str(item.get("note_url", "")).startswith("https://app.notion.com/"):
@@ -386,6 +411,20 @@ def ready(item, policy=None):
     else:
         raise ValueError("Unresolved content route")
     return True
+
+
+def ready(item, policy=None):
+    if item["key"].startswith("tiktok:"):
+        raise ValueError("TikTok is archive-only")
+    if not in_scope(item, policy or {}):
+        raise ValueError("Item or folder membership is outside the authorized cleanup scope")
+    if item["key"].startswith("bilibili:"):
+        folders = item.get("folder_ids", [])
+        if (not isinstance(folders, list) or not folders
+                or any(not isinstance(f, str) or not re.fullmatch(r"[0-9]+", f) for f in folders)
+                or len(set(folders)) != len(folders)):
+            raise ValueError("Bilibili cleanup needs exact observed owned-folder IDs")
+    return verify_archive(item)
 
 
 def explicit_discard_only(run):
@@ -514,10 +553,12 @@ def due(data, policy):
                 "max_work_minutes": 60 if primary else recovery.get("max_work_minutes", 30)}
     parent = max(today, key=lambda r: r["started_at"])
     pending = [k for k, item in data["items"].items() if item["status"] in {"pending", "pending_read", "failed", "archived"}
+               and not settled_item({"key": k, **item})
                and not item.get("historical_backlog") and not item.get("test_sample") and not item.get("human_parked")
                and in_scope({"key": k, **item}, policy)
                and not discovered_after_scan(item, parent)]
-    missing_platforms = sorted(set(policy["accounts"]) - set(parent.get("platforms", {})))
+    missing_platforms = sorted(set(parent.get("enabled_platforms", policy["accounts"]))
+                               - set(parent.get("platforms", {})))
     repairs = [r for r in runs if r.get("kind") == "repair" and r["date"] == day
                and not explicit_discard_only(r)]
     needs_repair = pending or missing_platforms or parent.get("retry_needed")
@@ -545,7 +586,7 @@ def validate_execution_audit(audit, run):
     for stage in stages:
         identity = (stage.get("id"), stage.get("platform"), stage.get("source_key"))
         if (not isinstance(identity[0], str) or not identity[0].strip()
-                or identity[1] not in ("xhs", "douyin", "bilibili", None)
+                or (identity[1] is not None and identity[1] not in run_platforms(run))
                 or (identity[2] is not None and not isinstance(identity[2], str))
                 or identity in identities):
             raise ValueError("Audit stages need unique identities and a known platform")
@@ -685,6 +726,9 @@ def main():
                 run = {"id": run_id, "date": day, "started_at": instant, "status": "running", "platforms": {}, "events": [],
                        "kind": "repair" if args.repair_of else "collect", "trigger": args.trigger,
                        "scheduled_for": day + "T" + policy.get("collect_at", "04:00") + ":00+08:00"}
+                run["enabled_platforms"] = list(BASE_PLATFORMS)
+                if tiktok_account_on(day):
+                    run["enabled_platforms"].append("tiktok")
                 if args.repair_of:
                     run["repair_of"] = args.repair_of
                 data["runs"][run_id] = run
@@ -747,8 +791,11 @@ def main():
                 raise ValueError("Run lease expired; begin a new run and reconcile")
             if args.command == "inventory":
                 platform = incoming["platform"]
-                if not ACCOUNTS.get(platform) or incoming["account"] != ACCOUNTS[platform]:
+                account = tiktok_account_on(run["date"]) if platform == "tiktok" else ACCOUNTS.get(platform)
+                if platform not in run_platforms(run) or not account or incoming["account"] != account:
                     raise ValueError("Account does not match the authorized source")
+                if platform == "tiktok" and incoming.get("account_verified") is not True:
+                    raise ValueError("TikTok inventory needs the verified signed-in Favorites account")
                 items = incoming["items"]
                 if len({str(row["id"]) for row in items}) != len(items) or incoming["accessible_count"] != len(items):
                     raise ValueError("Inventory count and unique source IDs do not match")
@@ -767,6 +814,11 @@ def main():
                     item = data["items"].setdefault(key, {"key": key, "first_seen_at": instant, "status": "pending",
                                                         "first_seen_run": args.run, "first_seen_phase": incoming.get("phase", "before")})
                     url = URL_BASES[platform] + identity
+                    if platform == "tiktok":
+                        url = row.get("url", "")
+                        canonical = rf"https://www\.tiktok\.com/@[A-Za-z0-9_.]+/(video|photo)/{identity}"
+                        if not re.fullmatch(canonical, url):
+                            raise ValueError("TikTok inventory needs the exact canonical post URL")
                     item.update(title=row.get("title", ""), url=url, last_seen_at=instant)
                     if platform == "bilibili":
                         folders = row.get("folder_ids", [])
@@ -775,13 +827,27 @@ def main():
                         item["observed_folder_ids"] = list(dict.fromkeys(folders))
                         if (run.get("kind") != "repair" and incoming.get("phase", "before") == "before") or not item.get("folder_ids"):
                             item["folder_ids"] = list(dict.fromkeys(folders))
-                result = {"observed": len(items), "pending": [i for i in data["items"].values() if i["status"] not in {"complete", "discarded"}]}
+                result = {"observed": len(items), "pending": [i for i in data["items"].values() if not settled_item(i)]}
             elif args.command == "record":
                 key = incoming["key"]
-                if not re.fullmatch(r"(?:xhs:[0-9a-f]{24}|douyin:[0-9]+|bilibili:BV[0-9A-Za-z]{10})", key):
+                platform, _, identity = key.partition(":")
+                if platform not in run_platforms(run) or not re.fullmatch(ID_PATTERNS[platform], identity):
                     raise ValueError("Item is outside the authorized platform scope")
                 if incoming["status"] not in STATES:
                     raise ValueError("Unknown item status")
+                if platform == "tiktok":
+                    if not tiktok_account_on(run["date"]) or not any(
+                        str(row["id"]) == identity
+                        for snapshot in run.get("inventories", {}).get("tiktok", [])
+                        if snapshot.get("phase", "before") == "before"
+                        for row in snapshot["items"]
+                    ):
+                        raise ValueError("TikTok checkpoint needs this run's verified Favorites inventory")
+                    if (incoming["status"] in {"complete", "discarded"}
+                            or any(incoming.get(field) for field in (
+                                "cleanup_intent_id", "cleanup_outcome", "cleanup_verified", "cleanup_acceptance",
+                            ))):
+                        raise ValueError("TikTok is archive-only")
                 if key not in data["items"] and not str(incoming.get("index_url", "")).startswith("https://app.notion.com/"):
                     raise ValueError("An item absent from live inventory needs an existing queue record")
                 previous = data["items"].get(key, {"key": key, "first_seen_at": instant, "discovered_from_queue": True})
@@ -791,7 +857,18 @@ def main():
                 if item.get("route") == "knowledge" and item["status"] in {"archived", "complete"}:
                     if previous.get("status") != "complete":
                         item["reading_contract_required"] = True
-                    validate_archive_reading(item, required=item.get("reading_contract_required", False))
+                    if platform != "tiktok":
+                        validate_archive_reading(item, required=item.get("reading_contract_required", False))
+                if platform == "tiktok":
+                    if item["url"] != previous["url"]:
+                        raise ValueError("TikTok checkpoint must keep the inventoried canonical post URL")
+                    if item["status"] == "archived":
+                        if (item.get("save_outcome") != "verified"
+                                or not Path(item.get("archive_readback", "")).is_file()):
+                            raise ValueError("TikTok archival needs an independently verified save and readback")
+                        if item.get("route") == "knowledge" and item.get("note_url") != item.get("index_url"):
+                            raise ValueError("TikTok knowledge archives need one canonical Reading Inbox article")
+                        verify_archive(item)
                 if item["status"] == "complete":
                     ready(item, json.loads((args.root / "trial.json").read_text()))
                     if item.get("cleanup_verified") is not True or item.get("source_state") not in ["not_favorited", "not_in_collection", "not_in_scoped_folders"]:
@@ -809,7 +886,8 @@ def main():
                 run["events"].append({"at": instant, **incoming})
                 result = item
             else:
-                if set(incoming or {}) & {"id", "date", "started_at", "kind", "trigger", "repair_of", "scheduled_for", "events", "inventories", "platforms", "audits"}:
+                if set(incoming or {}) & {"id", "date", "started_at", "kind", "trigger", "repair_of", "scheduled_for", "events", "inventories", "platforms", "audits",
+                                          "enabled_platforms"}:
                     raise ValueError("Run identity and original evidence cannot be overwritten by finish")
                 # A zero count is not proof of an empty source. Enforce only at
                 # future finish calls; existing historical receipts are unchanged.
@@ -822,13 +900,13 @@ def main():
                     for name, value in coverage.items():
                         if value == "verified_empty":
                             platform = "bilibili" if name == "bilibili_default" else name
-                            if platform not in ("xhs", "douyin", "bilibili"):
+                            if platform not in run_platforms(run):
                                 raise ValueError("Verified-empty claim needs a recognized platform")
                             claimed.add(platform)
                 scheduled_collection = run.get("kind") == "collect" and run.get("trigger") == "scheduled"
                 if (scheduled_collection and isinstance(outcome, str)
                         and re.search(r"(?:^|_)empty(?:_|$)", outcome.lower())):
-                    claimed.update(("xhs", "douyin", "bilibili"))
+                    claimed.update(run_platforms(run))
                 success = (isinstance(outcome, str) and (outcome.lower().startswith(("completed", "success"))
                                                          or outcome.lower() == "pass"))
                 if scheduled_collection and success:
@@ -836,7 +914,7 @@ def main():
                             or counts["discovered"] < 0):
                         raise ValueError("Successful scheduled completion needs a known discovery count; use an attention outcome when unknown")
                     if counts["discovered"] == 0:
-                        claimed.update(("xhs", "douyin", "bilibili"))
+                        claimed.update(run_platforms(run))
                 candidate = {**run, "finished_at": instant}
                 missing = [name for name in sorted(claimed) if not verified_empty(candidate, name, args.root)]
                 if missing:

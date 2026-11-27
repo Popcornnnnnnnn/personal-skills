@@ -32,7 +32,7 @@ flowchart LR
 | `notion-trash` | Guard selected trash/restore actions and verify the result |
 | `notion-writing` | File readable documents while preserving identity, content, and state |
 | `project-audit` | Review a whole project for defects and propose evidence-backed fixes |
-| `saved-content-review` | Separate source coverage, verified archival, and authorized cleanup, with configurable collection times |
+| `saved-content-review` | Track source coverage and verified archives, with configurable collection times and archive-only TikTok support |
 | `shop-search` | Search JD and Taobao through explicitly configured routes |
 | `social-publish` | Prepare truthful platform-specific launch packages and a pre-publish Notion review gate |
 | `telegram-digest` | Export Telegram group/channel transcripts and shared images read-only via `tdl` for cited key-point digests |

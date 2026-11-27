@@ -68,6 +68,22 @@ class NightWatchTest(unittest.TestCase):
             h = nw.health({'runs': {'r1': run}}, datetime.fromisoformat('2026-10-19T08:00:00+08:00'), root)
             self.assertEqual(h['channels']['xhs']['result'], 'failed')
 
+    def test_tiktok_reports_only_when_enabled_in_the_run(self):
+        with TemporaryDirectory() as d:
+            root = Path(d)
+            run = self.finished_with_unavailable_xhs(root)
+            instant = datetime.fromisoformat('2026-10-19T08:00:00+08:00')
+            data = {'runs': {'r1': run}}
+            self.assertNotIn('tiktok', nw.health(data, instant, root)['channels'])
+            run['enabled_platforms'] = ['xhs', 'douyin', 'bilibili', 'tiktok']
+            self.assertEqual(nw.health(data, instant, root)['channels']['tiktok']['result'], 'unverified')
+            run['coverage']['tiktok'] = {'coverage_complete': True}
+            run['blockers'].append({'key': 'tiktok:123', 'reason': 'Earlier save failed'})
+            data['items'] = {'tiktok:123': {'status': 'archived', 'save_outcome': 'verified'}}
+            health = nw.health(data, instant, root)
+            self.assertEqual(health['channels']['tiktok']['result'], 'success')
+            self.assertNotIn(run['blockers'][-1], health['issues'])
+
     def test_no_run_is_failure_not_empty(self):
         h = nw.health({'runs': {}}, datetime.fromisoformat('2026-10-19T08:00:00+08:00'), Path('/unused'))
         self.assertEqual(h['state'], 'missing_run')

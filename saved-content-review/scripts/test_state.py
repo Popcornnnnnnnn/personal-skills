@@ -142,8 +142,77 @@ class StateTests(unittest.TestCase):
         self.assertEqual(result["cleanup_acceptance"], state.GAP_ACCEPTANCE)
         self.assertEqual(self.call("plan", {}, "--key", item["key"])["reason"], "completed_source_dedup")
 
+    def test_tiktok_starts_on_configured_day_and_requires_exact_inventory(self):
+        profile = self.root / "tiktok.json"
+        profile.write_text(json.dumps({"account": "sample.owner", "starts_on": "2026-10-19"}))
+        inventory = {"platform": "tiktok", "account": "sample.owner", "account_verified": True,
+                     "phase": "before", "accessible_count": 1,
+                     "items": [{"id": "123", "url": "https://www.tiktok.com/@example/video/123"}]}
+        with patch.object(state, "TIKTOK_PROFILE", profile):
+            early = self.call("begin")["run"]
+            self.assertNotIn("tiktok", early["enabled_platforms"])
+            self.reject_unchanged("inventory", inventory, "--run", early["id"])
+            self.call("finish", {"outcome": "attention"}, "--run", early["id"])
+            self.clock += timedelta(days=1)
+            run = self.call("begin")["run"]
+            self.assertIn("tiktok", run["enabled_platforms"])
+            for change in ({"account": "another.owner"}, {"account_verified": False},
+                           {"items": [{"id": "123", "url": "https://www.tiktok.com/@example/video/456"}]},
+                           {"items": [{"id": "123", "url": "https://other.example/@example/video/123"}]}):
+                self.reject_unchanged("inventory", {**inventory, **change}, "--run", run["id"])
+            inventory_result = self.call("inventory", inventory, "--run", run["id"])
+            self.assertEqual(inventory_result["pending"][-1]["key"], "tiktok:123")
+            self.assertEqual(inventory_result["pending"][-1]["url"], inventory["items"][0]["url"])
+
+    def test_tiktok_verified_archive_is_reconciled_and_never_cleanup_ready(self):
+        profile = self.root / "tiktok.json"
+        profile.write_text(json.dumps({"account": "sample.owner", "starts_on": "2026-10-18"}))
+        key = "tiktok:123"
+        source = "https://www.tiktok.com/@example/video/123"
+        note = "https://app.notion.com/p/" + "1" * 32
+        evidence = self.root / "observed.json"
+        evidence.write_text(json.dumps({"source_key": key, "source_url": source, "note_url": note}))
+        reading = self.root / "reading.json"
+        reading.write_text(json.dumps({"version": 1, "source_key": key, "carrier": "text",
+            "basis": "Fictional complete source text", "evidence_path": str(evidence), "text_complete": True}))
+        inventory = {"platform": "tiktok", "account": "sample.owner", "account_verified": True,
+                     "phase": "before", "accessible_count": 1, "items": [{"id": "123", "url": source}]}
+        archive = {"key": key, "status": "archived", "route": "knowledge", "coverage_complete": True,
+                   "reading_receipt": str(reading), "archive_verified": True, "index_verified": True,
+                   "index_url": note, "note_url": note, "save_outcome": "verified",
+                   "archive_readback": str(evidence), "source_state": "favorited"}
+        with patch.object(state, "TIKTOK_PROFILE", profile):
+            run = self.call("begin")["run"]
+            self.reject_unchanged("record", archive, "--run", run["id"])
+            self.call("inventory", inventory, "--run", run["id"])
+            for change in ({"archive_readback": "/missing"}, {"archive_verified": False},
+                           {"index_verified": False}, {"coverage_complete": False},
+                           {"index_url": "https://app.notion.com/p/" + "2" * 32},
+                           {"url": "https://www.tiktok.com/@else/video/123"}):
+                self.reject_unchanged("record", {**archive, **change}, "--run", run["id"])
+            self.call("record", {"key": key, "status": "pending_read",
+                "save_outcome": "pending", "save_intent_id": "fixture-tiktok-save"}, "--run", run["id"])
+            self.reject_unchanged("record", archive, "--run", run["id"])
+            reconciled = self.root / "save-reconciled.json"
+            reconciled.write_text(json.dumps({"source_key": key, "stage": "save", "intent_id": "fixture-tiktok-save",
+                "outcome": "verified", "evidence_path": str(evidence)}))
+            result = self.call("record", {**archive, "reconciliation_evidence": str(reconciled)}, "--run", run["id"])
+            self.assertEqual(result["status"], "archived")
+            self.assertEqual(self.call("plan", {}, "--key", key)["action"], "reconcile")
+            after = self.call("inventory", {**inventory, "phase": "after"}, "--run", run["id"])
+            self.assertEqual(after["pending"], [])
+            self.reject_unchanged("ready", None, "--key", key)
+            for change in ({"status": "complete"}, {"status": "discarded"}, {"cleanup_verified": True},
+                           {"cleanup_outcome": "pending", "cleanup_intent_id": "unexpected-cleanup"}):
+                self.reject_unchanged("record", {"key": key, "status": "archived", **change}, "--run", run["id"])
+
     def test_scheduled_empty_success_requires_source_evidence_and_audit(self):
         import hashlib
+        profile = self.root / "tiktok.json"
+        profile.write_text(json.dumps({"account": "sample.owner", "starts_on": "2026-10-18"}))
+        patcher = patch.object(state, "TIKTOK_PROFILE", profile)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         with patch.object(state, 'due', return_value={'action': 'collect', 'trigger': 'scheduled'}):
             run = self.call('begin', None, '--trigger', 'scheduled')['run']
         run_id = run['id']
@@ -153,13 +222,13 @@ class StateTests(unittest.TestCase):
         folder = self.root / 'runs' / run_id
         folder.mkdir(parents=True)
         stages = []
-        for platform, account in state.ACCOUNTS.items():
+        for platform, account in {**state.ACCOUNTS, "tiktok": "sample.owner"}.items():
             receipt = {'run_id': run_id, 'date': run['date'], 'platform': platform, 'account': account,
                        'account_verified': True, 'positive_empty': True, 'accessible_count': 0,
                        'displayed_total': 0, 'unknown_count': 0, 'pagination_complete': True}
             evidence = []
             for phase, key in [('before', 'source_access'), ('after', 'independent_readback')]:
-                self.call('inventory', {'platform': platform, 'account': account, 'phase': phase,
+                self.call('inventory', {'platform': platform, 'account': account, 'phase': phase, 'account_verified': True,
                           'items': [], 'accessible_count': 0, 'displayed_total': 0,
                           'unknown_count': 0, 'pagination_complete': True}, '--run', run_id)
                 p = folder / f'{platform}-{phase}.json'
@@ -191,6 +260,11 @@ class StateTests(unittest.TestCase):
         self.reject_unchanged('finish', finish, '--run', run_id)
         receipt['unknown_count'] = 0
         receipt_path.write_text(json.dumps(receipt))
+        tiktok_receipt = folder / "empty-tiktok.json"
+        original_tiktok = tiktok_receipt.read_text()
+        tiktok_receipt.unlink()
+        self.reject_unchanged('finish', finish, '--run', run_id)
+        tiktok_receipt.write_text(original_tiktok)
         self.assertEqual(self.call('finish', finish, '--run', run_id)['status'], 'finished')
 
     def test_unknown_sources_can_finish_as_attention(self):
