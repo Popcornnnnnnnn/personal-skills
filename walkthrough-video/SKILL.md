@@ -12,10 +12,7 @@ Turn concepts, guides, or workflows into clear, narrated 1080p MP4 walkthrough v
 - **Central output library**: Write the final `.mp4` directly to the canonical video folder configured in the local owner profile (or `~/Movies/Walkthroughs/` on macOS—never drop loose `.mp4` files at `~/Movies/` root—unless the user explicitly specifies another path for the task). Prefer lowercase `kebab-case` filenames (`<topic>.mp4`) by topic so the library stays publish-ready.
 - **Keep one unified video per topic**: When the user asks to expand, clarify, or refine part of the same topic in follow-up feedback, weave the new or revised scenes directly into that single authoritative `.mp4` in logical narrative order (renumbering chapters and rebuilding the single timeline/finale, and removing obsolete fragment `.mp4` files). Produce separate videos only when the user explicitly requests separate episodes or distinct topics.
 - **Retain scratch while iterating; clean up after explicit acceptance**: Store intermediate outputs (render scripts, raw TTS clips, padded WAVs, silence metadata, preview PNGs, backup `.srt` files, and temporary preview copies) inside a dedicated scratch directory while iterating so revisions stay fast, never at a workspace root. **Do not delete intermediate files prematurely**; once the user **explicitly accepts** the video, remove all intermediate scratch outputs and temporary copies, then verify that the final `.mp4` in the central output folder remains intact.
-- On macOS, **always** include a copy-pasteable IINA launch command pointing to the central output file alongside its clickable file link:
-  ```bash
-  open -a IINA "<absolute-path-to-video.mp4>"
-  ```
+- Deliver the finished video with a direct file link (or inline media embed when supported by the chat host); do **not** include copy-pasteable local player launch commands (such as `open -a IINA ...`) unless the user explicitly asks.
 
 ## 1. 3Blue1Brown visual pedagogy & motion-first design
 
