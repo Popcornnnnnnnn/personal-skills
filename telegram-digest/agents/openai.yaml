@@ -1,0 +1,6 @@
+interface:
+  display_name: "Telegram Digest"
+  short_description: "Read-only Telegram group/channel export and key-point summarization via tdl"
+  default_prompt: "Use $telegram-digest to export a Telegram group's recent messages and images via tdl and summarize key points with citations."
+policy:
+  allow_implicit_invocation: true

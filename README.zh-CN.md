@@ -11,7 +11,7 @@ flowchart LR
     B["本地私有配置 (~/.config/personal-skills/profiles/)"] -->|"按需加载"| C
 ```
 
-## 技能列表（25 个技能包）
+## 技能列表（26 个技能包）
 
 | 技能 | 方法 |
 | --- | --- |
@@ -35,6 +35,7 @@ flowchart LR
 | `saved-content-review` | 分离来源覆盖率、已核验归档与授权清理，支持配置收集时间 |
 | `shop-search` | 通过明确配置的渠道搜索京东与淘宝商品 |
 | `social-publish` | 准备如实的各平台发布物料与发布前 Notion 审核门控 |
+| `telegram-digest` | 通过 `tdl` 只读导出 Telegram 群组/频道消息与图片截图，用于提炼带引用的要点摘要 |
 | `tell-dot` | 将选定材料交付给经过核验的 Finn/Dot 接收方并检查送达状态 |
 | `ui-preferences` | 在明确的作用域内应用个人界面偏好 |
 | `voice-memo-notion` | 保留语音转录证据并核验已保存的录音笔记 |

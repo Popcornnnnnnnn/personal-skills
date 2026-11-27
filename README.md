@@ -11,7 +11,7 @@ flowchart LR
     B["Private Local Profile (~/.config/personal-skills/profiles/)"] -->|"Loaded on Demand"| C
 ```
 
-## Skills (25 Packages)
+## Skills (26 Packages)
 
 | Skill | Method |
 | --- | --- |
@@ -35,6 +35,7 @@ flowchart LR
 | `saved-content-review` | Separate source coverage, verified archival, and authorized cleanup, with configurable collection times |
 | `shop-search` | Search JD and Taobao through explicitly configured routes |
 | `social-publish` | Prepare truthful platform-specific launch packages and a pre-publish Notion review gate |
+| `telegram-digest` | Export Telegram group/channel transcripts and shared images read-only via `tdl` for cited key-point digests |
 | `tell-dot` | Hand selected material to a verified Finn/Dot recipient and check delivery |
 | `ui-preferences` | Apply personal interface preferences with clear scope |
 | `voice-memo-notion` | Preserve transcript evidence and verify saved recording notes |

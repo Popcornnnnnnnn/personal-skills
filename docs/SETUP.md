@@ -33,4 +33,5 @@ Each harness discovers skills from its own user and project locations. Many also
 - **`tell-dot`:** Prefers direct Slack tools; optional bridge uses an already configured Codex CLI / Slack connection.
 - **`english-learning`:** Python 3 collector (`scripts/collect.py`), optional image generation, authorized Notion connector, and private destination IDs in its profile.
 - **`social-publish`:** Includes an offline Xiaohongshu preflight script (`scripts/check_xiaohongshu.py`; optional `--ocr` uses macOS Vision via `swift`).
+- **`telegram-digest`:** Requires `tdl` (`brew install telegram-downloader`) and a one-time QR login (`tdl login -T qr`); performs read-only exports under `/tmp/telegram-digest/`.
 - **`x-search`:** Python 3 and a SocialData API key (`SOCIALDATA_API_KEY` or macOS Keychain profile).
