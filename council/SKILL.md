@@ -1,6 +1,6 @@
 ---
 name: council
-description: Run an explicit, read-only Council review with Codex, Gemini Neon, and Command Code DeepSeek V4.1 Flash for code, UI, or a decision. Use only when the user asks to run Council.
+description: Run an explicit, read-only Council review with Codex, Gemini Neon, and Command Code DeepSeek V4.1 Flash Fast for code, UI, or a decision. Use only when the user asks to run Council.
 disable-model-invocation: true
 ---
 
@@ -14,7 +14,7 @@ Use three independent reviewers by default:
 
 - Codex with GPT-6.2 Sol (`gpt-6.2-sol`).
 - Antigravity with Gemini 4 Neon (`gemini-4-neon`). Select the direct Neon model.
-- Command Code via ACP with DeepSeek V4.1 Flash (`deepseek/deepseek-v4.1-flash`).
+- Command Code via ACP with DeepSeek V4.1 Flash Fast (`deepseek/deepseek-v4.1-flash-fast`).
 
 Use any reviewer the user explicitly requests in place of the corresponding default. In T3 Code, resolve the requested models and provider instances with `orchestrator_capabilities` (pass `search`, such as `"deepseek"`, when a large ACP catalog is truncated), reuse an applicable capability result, and delegate according to the host's orchestration rules. In other hosts, use an available delegation tool that can run each requested model independently. Report unavailable reviewers and any partial coverage. Honor explicit model choices and ask before substituting a model.
 

@@ -22,7 +22,7 @@ Each harness discovers skills from its own user and project locations. Many also
 
 ## Per-Skill External Dependencies
 
-- **`council`:** Requires a host that can delegate to Codex, Gemini, and Command Code over ACP. In T3 Code, enable the Codex, Antigravity, and Command Code (`cmd acp`) providers. Council defaults to GPT-6.2 Sol, Gemini 4 Neon, and DeepSeek V4.1 Flash (`deepseek/deepseek-v4.1-flash`). Each reviewer uses the host’s configured access.
+- **`council`:** Requires a host that can delegate to Codex, Gemini, and Command Code over ACP. In T3 Code, enable the Codex, Antigravity, and Command Code (`cmd acp`) providers. Council defaults to GPT-6.2 Sol, Gemini 4 Neon, and DeepSeek V4.1 Flash Fast (`deepseek/deepseek-v4.1-flash-fast`). Each reviewer uses the host’s configured access.
 - **`agent-browser` / `google-flow`:** Require a separately installed **BrowserOS neo** connection and active browser login sessions (`flow.google.com` / `flowmusic.app` for `google-flow`). Optional reference-video prep in `google-flow/scripts/flow_video_prep.py` uses `ffmpeg`/`ffprobe` and `uv` (downloading `torch`, `transformers`, `numpy`, `pillow`, and `Depth-Anything-V2` weights on first `depth` run).
 - **`iphone-wireless`:** Requires macOS with full Xcode, a pre-signed WebDriverAgent runner with Wi-Fi debugging enabled ("Connect via network" in Xcode), `appium` (`xcuitest` driver), `@wdio/mcp`, and `~/.local/bin/iphone-wireless`.
 - **`linkget`:** Requires the local `linkget` CLI (`brew install Popcornnnnnnnn/tap/linkget`) and its runtime tools (`gallery-dl`, `yt-dlp`, `ffmpeg`, `exiftool`, `deno`); full X Articles also require saved `x.com` sessions (`linkget auth x`) or an authenticated BrowserOS neo / Chrome reader.
