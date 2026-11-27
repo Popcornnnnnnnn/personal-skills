@@ -17,7 +17,7 @@ flowchart LR
 | --- | --- |
 | `agent-auth` | 在三级安全护栏下自动处理短信/邮件验证码、桌面端微信快捷登录、钥匙串 TOTP 及 Chrome 到 iPhone 的扫码登录 |
 | `agent-browser` | 选择直接读取或使用 Neo；保持登录态与任务标签页边界 |
-| `council` | 让 Codex、Gemini Neon 与 Command Code（ACP）DeepSeek V4.1 Flash Fast 独立评审，并核实发现的问题 |
+| `council` | 让主审（Codex、Gemini Neon，2×权重）与辅审（Command Code DeepSeek V4.1 Flash Fast、CodeBuddy GLM-5.3 Flash，1×权重）独立评审，并核实发现的问题 |
 | `daily-brief-feedback` | 精确记录人工反馈，不自行编造偏好标签 |
 | `delivery` | 通过直接交付或有界 P0/P1 PR 评审、快/慢测试分层以及授权合入完成变更交付 |
 | `doubao-search` | 查询飞书企业知识并标注来源核验情况 |
