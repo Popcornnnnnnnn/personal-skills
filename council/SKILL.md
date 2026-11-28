@@ -22,7 +22,16 @@ Use any reviewer the user explicitly requests in place of the corresponding defa
 ## Review
 
 1. Freeze the review scope and give each reviewer the same brief and candidate. Use the same diff, decision criteria, or before/after screenshots for all reviewers. Include the intended behavior, relevant constraints, and verification already run. Share only authorized material.
-2. Start the reviews in parallel when supported. Keep them read-only and independent. Ask each for up to three findings with impact, evidence, and a proposed fix or check. For a decision, ask for a recommendation and its decisive trade-off. If the user requests scores, give the same rubric to all reviewers and keep any target score out of their brief.
-3. Verify the findings against the candidate and relevant checks. Judge concrete defects on verified evidence regardless of tier; apply the `2x` primary / `1x` supporting weights to judgment calls, tie-breaks, and aggregate scores (when requested). Report agreement, meaningful disagreements, and missing coverage. The parent agent owns any fixes the user authorized. After material fixes, run at most one fresh review round by default. Carry forward the project's existing acceptance and delivery rules.
+2. Preserve blindness whenever unbiased evaluation or scoring matters: keep target scores, passing thresholds, round numbers, attempt suffixes (such as `-r2` or `-v3`), prior-round framing, and polish-pass branch names out of both the brief and artifact paths (use neutral paths for exported screenshots or snapshots).
+3. Start the reviews in parallel when supported. Keep them read-only and independent. Ask each for up to three findings with impact, evidence, and a proposed fix or check. For a decision, ask for a recommendation and its decisive trade-off.
+4. Verify the findings against the candidate and relevant checks. Judge concrete defects on verified evidence regardless of tier; apply the `2x` primary / `1x` supporting weights to judgment calls, tie-breaks, and aggregate scores. Report agreement, meaningful disagreements, and missing coverage. The parent agent owns any fixes the user authorized. Carry forward the project's existing acceptance and delivery rules.
+
+## Scoring & Convergence
+
+Apply these guardrails when scores or multi-round iterations (such as `/goal` loops) are requested:
+
+- **Rubric scale:** Give all reviewers the same rubric. Prefer integer `1–5` bands with explicit behavioral anchors (for example, `4 = shippable with no visible defects`, `5 = reference-grade`) over `0.1`-precision `10`-point scales unless the user mandates another scale.
+- **Pass gates:** Gate on zero verified `P0`/`P1` defects across all reviewers plus the `2x`/`1x` weighted aggregate (or primary-pair consensus) on subjective dimensions. Avoid unweighted headcount votes or raw per-model `min`-cell cutoffs across models with different baseline strictness; if a user-specified unweighted gate stalls on inter-model calibration drift, surface the drift and ask before looping further.
+- **Stop condition:** Run at most one fresh review round after material fixes by default. In explicit multi-round runs, cap iterations at `2–3` rounds on unchanged inputs and criteria, or stop once a round finds zero new verified `P0`/`P1` defects and the weighted aggregate plateaus (within `0.2` on a `10`-point scale, or unchanged band on `1–5`). Prefer expanding audited artifacts or criteria (for example, accessibility, localization, or contrast checks) over re-scoring the same captures.
 
 Report the actual reviewers, rounds, verified findings, and remaining blockers. Label any missing review or score explicitly. Only write to a PR when the user or delivery workflow has authorized the write.
